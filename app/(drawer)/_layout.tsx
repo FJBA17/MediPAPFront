@@ -77,6 +77,16 @@ export default function DrawerLayout() {
               drawerIcon: ({ color }) => <Ionicons name="person" size={22} color={color} />
             }}
           />
+
+          <Drawer.Screen
+            name="SeguimientoPap"
+            options={{
+              title: "SeguimientoPap",
+              headerShown: false,
+              drawerIcon: ({ color }) => <Ionicons name="medkit" size={22} color={color} />
+            }}
+          />
+
           <Drawer.Screen
             name="Usuarios"
             options={{
