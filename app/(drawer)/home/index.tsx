@@ -204,7 +204,7 @@ export default function HomeScreen() {
         return;
       }
       
-      console.log('Creando seguimiento para RUT:', currentRut);
+      //console.log('Creando seguimiento para RUT:', currentRut);
       
       // Crear seguimiento PAP
       await MedicionesApi.post('/seguimientoPap', {
