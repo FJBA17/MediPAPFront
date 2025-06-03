@@ -9,20 +9,6 @@ import { useShallow } from 'zustand/react/shallow';
 import PasswordCambioForm from '../../../src/components/PasswordCambioForm';
 import AdminPasswordCambioForm from '../../../src/components/AdminPasswordCambioForm';
 
-const UsuarioSchema = Yup.object().shape({
-  email: Yup.string().email('Email inválido').required('Email requerido'),
-  nombre: Yup.string().required('Nombre requerido'),
-  apellido: Yup.string().required('Apellido requerido'),
-  isAdmin: Yup.boolean().required()
-});
-
-const trimFields = (values) => {
-  return {
-    ...values,
-    email: values.email.replace(/\s+/g, ''),
-  };
-};
-
 interface Usuario {
   userName: string;
   email: string;
@@ -37,6 +23,45 @@ interface EditarUsuarioFormProps {
   onUsuarioEditado: () => void;
   origenNavegacion: 'menu' | 'listaUsuarios';
 }
+
+// Función para validar nombres (solo letras y espacios)
+const validateName = (value: string) => {
+  const nameRegex = /^[a-zA-ZÀ-ÿ\u00f1\u00d1\s]*$/;
+  return nameRegex.test(value);
+};
+
+const UsuarioSchema = Yup.object().shape({
+  email: Yup.string()
+  .email('Email inválido')
+  .required('Email requerido')
+  .test('no-emojis', 'El email no puede contener emojis o caracteres especiales', (value) => {
+    if (!value) return true;
+    const emailRegex = /^[a-zA-Z0-9@._-]*$/;
+    return emailRegex.test(value);
+  }),
+
+  nombre: Yup.string()
+  .required('Nombre requerido')
+  .min(3, 'El nombre debe tener al menos 3 caracteres')
+  .max(50, 'El nombre no puede tener más de 50 caracteres')
+  .test('only-letters', 'El nombre solo puede contener letras y espacios', validateName),
+
+  apellido: Yup.string()
+  .required('Apellido requerido')
+  .min(3, 'El apellido debe tener al menos 3 caracteres')
+  .max(50, 'El apellido no puede tener más de 50 caracteres')
+  .test('only-letters', 'El apellido solo puede contener letras y espacios', validateName),
+  isAdmin: Yup.boolean().required()
+});
+
+const trimFields = (values) => {
+  return {
+    ...values,
+    email: values.email.replace(/\s+/g, ''),
+    nombre: values.nombre.trim(),
+    apellido: values.apellido.trim(),
+  };
+};
 
 const EditarUsuarioForm: React.FC<EditarUsuarioFormProps> = ({
   usuario: initialUsuario,
