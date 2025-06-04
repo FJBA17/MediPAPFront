@@ -187,14 +187,14 @@ function CustomDrawerContent({ user, isAdmin, logOut, router, ...restProps }) {
     
     // Filtrar solo las rutas para no admin
     const routes = restProps.state.routes.filter(
-      route => ['home', 'Cuenta/index'].includes(route.name)
+      route => ['home', 'Cuenta/index', 'SeguimientoPap'].includes(route.name)
     );
     
     return {
       ...restProps.state,
       routes,
       routeNames: restProps.state.routeNames.filter(
-        name => ['home', 'Cuenta/index'].includes(name)
+        name => ['home', 'Cuenta/index', 'SeguimientoPap'].includes(name)
       )
     };
   })();

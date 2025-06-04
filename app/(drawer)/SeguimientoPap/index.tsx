@@ -14,6 +14,7 @@ import {
   TouchableWithoutFeedback,
   TextInput,
   SafeAreaView,
+  KeyboardAvoidingView,
 } from 'react-native';
 import { DrawerActions, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MedicionesApi } from '../../../src/config/api/medicionesApi';
@@ -173,7 +174,7 @@ export default function PantallaSeguimientoPap() {
   );
 
   return (
-    <SafeAreaView style={{flex: 1}}>
+    <KeyboardAvoidingView style={{flex: 1}}>
       <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
         <View style={styles.bodyFlexBox}>              
           {/* Buscador */}
@@ -288,7 +289,7 @@ export default function PantallaSeguimientoPap() {
           </Animated.View>
         </Modal>
       </ScrollView>
-    </SafeAreaView>
+    </KeyboardAvoidingView>
   );
 }
 

@@ -779,8 +779,8 @@ const styles = StyleSheet.create({
 
   // Estilos de modales
   overlay: {
-      ...StyleSheet.absoluteFillObject,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
   modalView: {
       position: 'absolute',
