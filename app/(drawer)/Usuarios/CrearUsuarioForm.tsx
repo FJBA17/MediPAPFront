@@ -5,22 +5,71 @@ import * as Yup from 'yup';
 import { MedicionesApi } from '../../../src/config/api/medicionesApi';
 import { FontFamily, FontSize, Color, Border, Padding } from '../../../src/theme/GlobalStyles';
 
+
+// Función para validar que solo contenga letras, números y algunos caracteres especiales básicos
+const validateAlphanumeric = (value: string) => {
+  const alphanumericRegex = /^[a-zA-Z0-9\s._-]*$/;
+  return alphanumericRegex.test(value);
+};
+
+// Función para validar nombres (solo letras y espacios)
+const validateName = (value: string) => {
+  const nameRegex = /^[a-zA-ZÀ-ÿ\u00f1\u00d1\s]*$/;
+  return nameRegex.test(value);
+};
+
+// Función para validar username (letras, números, guiones y guiones bajos)
+const validateUsername = (value: string) => {
+  const usernameRegex = /^[a-zA-Z0-9_-]*$/;
+  return usernameRegex.test(value);
+};
+
+
 const UsuarioSchema = Yup.object().shape({
   userName: Yup.string()
     .lowercase('El nombre de usuario debe estar en minúsculas')
-    .required('Usuario requerido'),
-  email: Yup.string().email('Email inválido').required('Email requerido'),
-  nombre: Yup.string().required('Nombre requerido'),
-  apellido: Yup.string().required('Apellido requerido'),
-  password: Yup.string().min(6, 'La contraseña debe tener al menos 6 caracteres').required('Contraseña requerida'),
-  isAdmin: Yup.boolean().required()
+    .required('Usuario requerido')
+    .min(3,'El nombre de usuario debe tener al menos 3 caracteres')
+    .max(20, 'El nombre de usuario no puede tener más de 20 caracteres')
+    .test('alphanumeric', 'El nombre de usuario solo puede contener letras, números, guiones y guiones bajos', validateUsername),
+    
+  email: Yup.string()
+  .email('Email inválido')
+  .required('Email requerido')
+  .test('no-emojis', 'El email no puede contener emojis o caracteres especiales', (value) => {
+    if (!value) return true;
+    const emailRegex = /^[a-zA-Z0-9@._-]*$/;
+    return emailRegex.test(value);
+  }),
+
+  nombre: Yup.string()
+  .required('Nombre requerido')
+  .min(3, 'El nombre debe tener al menos 3 caracteres')
+  .max(50, 'El nombre no puede tener más de 50 caracteres')
+  .test('only-letters', 'El nombre solo puede contener letras y espacios', validateName),
+
+  apellido: Yup.string()
+  .required('Apellido requerido')
+  .min(3, 'El apellido debe tener al menos 3 caracteres')
+  .max(50, 'El apellido no puede tener más de 50 caracteres')
+  .test('only-letters', 'El apellido solo puede contener letras y espacios', validateName),
+
+  password: Yup.string()
+  .min(6, 'La contraseña debe tener al menos 6 caracteres')
+  .required('Contraseña requerida')
+  .test('alphanumeric', 'La contraseña solo puede contener letras, números y algunos caracteres especiales básicos', validateAlphanumeric),
+
+  isAdmin: Yup.boolean()
+  .required()
 });
 
-const trimFields = (values: { userName: string; email: string; }) => {
+const trimFields = (values: { userName: string; email: string; nombre: string; apellido: string; }) => {
   return {
     ...values,
     userName: values.userName.replace(/\s+/g, '').toLowerCase(),
     email: values.email.replace(/\s+/g, ''),
+    nombre: values.nombre.trim(),
+    apellido: values.apellido.trim(),
   };
 };
 

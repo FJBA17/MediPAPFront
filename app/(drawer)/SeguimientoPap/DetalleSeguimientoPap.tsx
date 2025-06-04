@@ -48,7 +48,6 @@ export default function DetalleSeguimientoPap() {
   const modalY = useRef(new Animated.Value(1000)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
 
-
   const panResponder = useRef(
     PanResponder.create({
       onMoveShouldSetPanResponder: (_, gestureState) => {
@@ -72,7 +71,6 @@ export default function DetalleSeguimientoPap() {
     })
   ).current;
 
-
   useLayoutEffect(() => {
     navigation.setOptions({
       headerLeft: () => (
@@ -86,7 +84,6 @@ export default function DetalleSeguimientoPap() {
     });
   }, [navigation]);
 
-
   useFocusEffect(
     useCallback(() => {
       const fetchData = async () => {
@@ -96,8 +93,6 @@ export default function DetalleSeguimientoPap() {
             MedicionesApi.get(`/seguimientoPap/rut/${rut}`),
             MedicionesApi.get(`/seguimientoEstado/ultimoEstado/${rut}`).catch(() => null)
           ]);
-
-          //console.log('Seguimiento recibido:', seguimientoRes.data);
 
           const notasOrdenadas = (notasRes.data.data || []).sort(
             (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
@@ -115,7 +110,6 @@ export default function DetalleSeguimientoPap() {
       fetchData();
     }, [rut])
   );
-
 
   const formatearFechaHora = (fechaIso: string) => {
     const fecha = new Date(fechaIso);
@@ -151,7 +145,6 @@ export default function DetalleSeguimientoPap() {
       setNuevaNota('');
       setModalVisible(false);
     } catch (error) {
-      //console.error(error);
       setAlertTitle('No se pudo guardar la nota y el estado');
       setAlertConfirmText('OK');
       setShowCancelButton(false);
@@ -192,63 +185,147 @@ export default function DetalleSeguimientoPap() {
     });
   };
 
+  const getEstadoStyle = (estado: string) => {
+    switch (estado) {
+      case 'En seguimiento':
+        return { backgroundColor: '#FFF3E0', color: '#FF9800' };
+      case 'Contactada':
+        return { backgroundColor: '#E91E63', color: '#FCE4EC' };
+      case 'Finalizada':
+        return { backgroundColor: '#E8F5E8', color: '#4CAF50' };
+      default:
+        return { backgroundColor: '#F5F5F5', color: '#9E9E9E' };
+    }
+  };
 
   if (loading) {
-    return <ActivityIndicator style={{ flex: 1 }} size="large" />;
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#f08fb8" />
+      </View>
+    );
   }
 
   return (
-    <KeyboardAvoidingView style={{ flex: 1 }} behavior="padding">
-      <View style={{ flex: 1 }}>
-
-        {/*Header*/}
-        <View style={styles.headerContainer}>
-          <Text style={styles.title}>Datos de la Paciente</Text>
+    <KeyboardAvoidingView style={styles.container} behavior="padding">
+      <View style={styles.mainContainer}>
+        {/* Header fijo con datos de la paciente */}
+        <View style={styles.headerSection}>
+          <Text style={styles.sectionTitle}>Datos de la Paciente</Text>
+          
           {seguimiento ? (
-            <View style={styles.card}>
-              <Text><Text style={styles.title}>Nombre:</Text> {seguimiento.nombreCompleto}</Text>
-              <Text><Text style={styles.title}>RUT:</Text> {seguimiento.rut}</Text>
-              <Text><Text style={styles.title}>Edad:</Text> {seguimiento.edad || 'No registrada'}</Text>
-              <Text><Text style={styles.title}>Fecha Nacimiento:</Text> {seguimiento.fechaNacimiento || 'No registrado'}</Text>
-              <Text><Text style={styles.title}>Fono:</Text> {seguimiento.fono || 'No registrado'}</Text>
-              <Text><Text style={styles.title}>Domicilio:</Text> {seguimiento.domicilio || 'No registrado'}</Text>
-              <Text><Text style={styles.title}>Fecha Detección:</Text> {formatearFechaHora(seguimiento.fechaDeteccion)?.slice(0,8) || 'No registrada'}</Text>
-              <Text><Text style={styles.title}>Fecha PAP:</Text> {seguimiento.fechaPap || 'No registrada'}</Text>
-              <Text><Text style={styles.title}>Vigencia PAP:</Text> {seguimiento.vigenciaPap || 'No registrada'}</Text>
-              <Text><Text style={styles.title}>Años PAP:</Text> {seguimiento.anosPap ?? 'No registrado'}</Text>
-              <Text><Text style={styles.title}>Estado actual:</Text> {estadoActual}</Text>
+            <View style={styles.patientCard}>
+              <View style={styles.patientRow}>
+                <Icon name="person" size={16} color="#666" style={styles.icon} />
+                <Text style={styles.patientLabel}>Nombre:</Text>
+                <Text style={styles.patientValue}>{seguimiento.nombreCompleto}</Text>
+              </View>
+              
+              <View style={styles.patientRow}>
+                <Icon name="badge" size={16} color="#666" style={styles.icon} />
+                <Text style={styles.patientLabel}>RUT:</Text>
+                <Text style={[styles.patientValue, {color: Color.colorMediumvioletred, fontWeight: 'bold'}]}>{seguimiento.rut}</Text>
+              </View>
+              
+              <View style={styles.patientRow}>
+                <Icon name="event" size={16} color="#666" style={styles.icon} />
+                <Text style={styles.patientLabel}>Edad:</Text>
+                <Text style={styles.patientValue}>{seguimiento.edad || 'No registrada'}</Text>
+              </View>
+              
+              <View style={styles.patientRow}>
+                <Icon name="cake" size={16} color="#666" style={styles.icon} />
+                <Text style={styles.patientLabel}>F.N:</Text>
+                <Text style={styles.patientValue}>{seguimiento.fechaNacimiento || 'No registrado'}</Text>
+              </View>
+              
+              <View style={styles.patientRow}>
+                <Icon name="phone" size={16} color="#666" style={styles.icon} />
+                <Text style={styles.patientLabel}>Fono:</Text>
+                <Text style={styles.patientValue}>{seguimiento.fono || 'No registrado'}</Text>
+              </View>
+              
+              <View style={styles.patientRow}>
+                <Icon name="home" size={16} color="#666" style={styles.icon} />
+                <Text style={styles.patientLabel}>Domicilio:</Text>
+                <Text style={styles.patientValue}>{seguimiento.domicilio || 'No registrado'}</Text>
+              </View>
+              
+              <View style={styles.patientRow}>
+                <Icon name="event-available" size={16} color="#666" style={styles.icon} />
+                <Text style={styles.patientLabel}>Fecha Detección:</Text>
+                <Text style={styles.patientValue}>{formatearFechaHora(seguimiento.fechaDeteccion)?.slice(0,8) || 'No registrada'}</Text>
+              </View>
+              
+              <View style={styles.patientRow}>
+                <Icon name="healing" size={16} color="#666" style={styles.icon} />
+                <Text style={styles.patientLabel}>Fecha PAP:</Text>
+                <Text style={styles.patientValue}>{seguimiento.fechaPap || 'No registrada'}</Text>
+              </View>
+              
+              <View style={styles.patientRow}>
+                <Icon name="verified-user" size={16} color="#666" style={styles.icon} />
+                <Text style={styles.patientLabel}>Vigencia PAP:</Text>
+                <Text style={styles.patientValue}> {seguimiento.vigenciaPap || 'NO'}</Text>
+              </View>
+              
+              <View style={styles.patientRow}>
+                <Icon name="history" size={16} color="#666" style={styles.icon} />
+                <Text style={styles.patientLabel}>Años PAP:</Text>
+                <Text style={styles.patientValue}>{seguimiento.anosPap ?? 'No registrado'}</Text>
+              </View>
+              
+              <View style={[styles.patientRow, { marginTop: 8 }]}>
+                <View style={[styles.estadoBadge, getEstadoStyle(estadoActual)]}>
+                  <View style={[styles.estadoDot, { backgroundColor: getEstadoStyle(estadoActual).color }]} />
+                  <Text style={[styles.estadoText, { color: getEstadoStyle(estadoActual).color }]}>
+                    {estadoActual}
+                  </Text>
+                </View>
+              </View>
             </View>
           ) : (
-            <Text>No se encontró información del seguimiento.</Text>
+            <View style={styles.patientCard}>
+              <Text style={styles.noDataText}>No se encontró información del seguimiento.</Text>
+            </View>
           )}
-
-          <Text style={styles.title}>Notas</Text>
+          
+          {/* Título de Notas */}
+          <Text style={styles.sectionTitle}>Notas</Text>
         </View>
 
-        {/* Lista de notas */}
-        <View style={{flex: 1}}>
-          <ScrollView contentContainerStyle={styles.container} showsVerticalScrollIndicator={false}>
+        {/* Sección de Notas con scroll independiente */}
+        <View style={styles.notesContainer}>
+          <ScrollView 
+            style={styles.notesScrollView}
+            showsVerticalScrollIndicator={false}
+          >
             {notas.length === 0 ? (
-              <Text style={styles.noNotas}>No hay notas registradas</Text>
+              <View style={styles.emptyNotesCard}>
+                <Icon name="note" size={48} color="#ccc" />
+                <Text style={styles.emptyNotesText}>No hay notas registradas</Text>
+              </View>
             ) : (
               notas.map((nota, index) => (
-                <View key={index} style={styles.card}>
-                  <Text style={styles.fecha}>{formatearFechaHora(nota.fecha)}</Text>
-                  <Text style={styles.textoNota}>{nota.nota}</Text>
-                  <Text style={styles.autor}>Registrado por: {nota.usuarioRegistro}</Text>
+                <View key={index} style={styles.noteCard}>
+                  <View style={styles.noteHeader}>
+                    <Text style={styles.noteDate}>{formatearFechaHora(nota.fecha)}</Text>
+                  </View>
+                  <Text style={styles.noteText}>{nota.nota}</Text>
+                  <Text style={styles.noteAuthor}>Registrado por: {nota.usuarioRegistro}</Text>
                 </View>
               ))
             )}
           </ScrollView>
         </View>
-        
-        {/* Botón flotante */}
-        <TouchableOpacity style={styles.floatingButton} onPress={openModal}>
-          <Icon name="add-circle" size={24} color="white" />
-        </TouchableOpacity>
       </View>
+      
+      {/* Botón flotante con gradiente */}
+      <TouchableOpacity style={styles.floatingButton} onPress={openModal}>
+        <Icon name="add" size={28} color="white" />
+      </TouchableOpacity>
 
-      {/* Modal para crear*/}
+      {/* Modal mejorado */}
       <Modal transparent visible={modalVisible} animationType="none">
         <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}> 
           <TouchableWithoutFeedback onPress={closeModal}>
@@ -260,17 +337,23 @@ export default function DetalleSeguimientoPap() {
           style={[styles.modalView, { transform: [{ translateY: modalY }] }]}
           {...panResponder.panHandlers}
         >
+          <View style={styles.modalHandle} />
           <Text style={styles.modalTitle}>Nueva Nota</Text>
+          
           <TextInput
             style={styles.input}
             placeholder="Escribe la nota..."
+            placeholderTextColor="#999"
             multiline
             value={nuevaNota}
             onChangeText={setNuevaNota}
           />
+          
           <TouchableOpacity onPress={() => setShowEstadoOptions(!showEstadoOptions)} style={styles.selector}>
             <Text style={styles.selectorText}>{nuevoEstado}</Text>
+            <Icon name={showEstadoOptions ? "keyboard-arrow-up" : "keyboard-arrow-down"} size={24} color="#666" />
           </TouchableOpacity>
+          
           {showEstadoOptions && (
             <View style={styles.optionList}>
               {['No contactada', 'Contactada', 'En seguimiento', 'Finalizada'].map((estado) => (
@@ -287,12 +370,13 @@ export default function DetalleSeguimientoPap() {
               ))}
             </View>
           )}
-          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-            <Pressable style={styles.modalButton} onPress={closeModal}>
-              <Text style={styles.modalButtonText}>Cancelar</Text>
+          
+          <View style={styles.modalButtons}>
+            <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={closeModal}>
+              <Text style={styles.cancelButtonText}>Cancelar</Text>
             </Pressable>
-            <Pressable style={styles.modalButton} onPress={crearNotaYEstado}>
-              <Text style={styles.modalButtonText}>Guardar</Text>
+            <Pressable style={[styles.modalButton, styles.saveButton]} onPress={crearNotaYEstado}>
+              <Text style={styles.saveButtonText}>Guardar</Text>
             </Pressable>
           </View>
         </Animated.View>
@@ -312,64 +396,153 @@ export default function DetalleSeguimientoPap() {
 
 const styles = StyleSheet.create({
   container: {
-    flexGrow: 1,
-    padding: 16,
-    backgroundColor: Color.colorWhite,
-  },
-  title: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    color: Color.colorPalevioletred_100
-  },
-  noNotas: {
-    fontStyle: 'italic',
-    color: '#888',
-  },
-  headerContainer: {
-    paddingHorizontal: 16,
-    backgroundColor: Color.colorWhite,
-  },
-  scrollNotas: {
     flex: 1,
-    paddingHorizontal: 16,
-    marginTop: 10,
-  },
-  card: {
-    padding: 15,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#f08fb8',
-    borderRadius: 12,
     backgroundColor: Color.colorLavenderblush,
   },
-  fecha: {
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: Color.colorLavenderblush,
+  },
+  mainContainer: {
+    flex: 1,
+  },
+  headerSection: {
+    paddingHorizontal: 16,
+    paddingTop: 8,
+    paddingBottom: 16,
+  },
+  notesContainer: {
+    flex: 1,
+    paddingHorizontal: 16,
+  },
+  notesScrollView: {
+    flex: 1,
+  },
+  sectionTitle: {
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 5,
+    color: '#1F2937',
   },
-  textoNota: {
-    fontSize: 15,
-    marginBottom: 5,
+  patientCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 20,
+    marginBottom: 15,
+    shadowColor: '#000',
+    shadowOpacity: 0.08,
+    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 12,
+    elevation: 4,
   },
-  autor: {
-    fontSize: 13,
-    color: '#666',
+  patientRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+    flexWrap: 'wrap',
+  },
+  patientLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#374151',
+    minWidth: 100,
+    marginRight: 8,
+  },
+  patientValue: {
+    fontSize: 16,
+    color: 'black',
+    flex: 1,
+  },
+  icon: {
+    marginRight: 5,
+  },
+  estadoBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 20,
+  },
+  estadoDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  estadoText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+  noDataText: {
+    fontSize: 16,
+    color: '#6B7280',
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  emptyNotesCard: {
+    backgroundColor: 'white',
+    borderRadius: 20,
+    padding: 40,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  emptyNotesText: {
+    fontSize: 16,
+    color: '#9CA3AF',
+    marginTop: 12,
+    fontStyle: 'italic',
+  },
+  noteCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 12,
+    shadowColor: '#000',
+    shadowOpacity: 0.05,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  noteHeader: {
+    marginBottom: 8,
+  },
+  noteDate: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  noteText: {
+    fontSize: 16,
+    color: '#374151',
+    lineHeight: 22,
+    marginBottom: 8,
+  },
+  noteAuthor: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    fontStyle: 'italic',
   },
   floatingButton: {
     position: 'absolute',
     right: 20,
     bottom: 30,
-    backgroundColor: '#f08fb8',
-    borderRadius: 30,
-    width: 60,
-    height: 60,
+    backgroundColor: '#EC4899',
+    borderRadius: 28,
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowColor: '#EC4899',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowRadius: 8,
+    elevation: 8,
   },
   overlay: {
     ...StyleSheet.absoluteFillObject,
@@ -381,54 +554,96 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'white',
-    borderTopLeftRadius: 20,
-    borderTopRightRadius: 20,
-    padding: 20,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingTop: 12,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#D1D5DB',
+    borderRadius: 2,
+    alignSelf: 'center',
+    marginBottom: 20,
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    marginBottom: 15,
-    color: 'black'
+    marginBottom: 20,
+    color: '#1F2937',
+    textAlign: 'center',
   },
   input: {
     borderWidth: 1,
-    borderColor: Color.colorLavenderblush_200,
-    borderRadius: 10,
-    padding: 10,
-    height: 100,
-    marginBottom: 15,
-    textAlignVertical: 'top'
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    height: 120,
+    marginBottom: 16,
+    textAlignVertical: 'top',
+    fontSize: 16,
+    color: '#1F2937',
+    backgroundColor: '#F9FAFB',
   },
   selector: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
     borderWidth: 1,
-    borderColor: Color.colorLavenderblush_200,
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 10,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    backgroundColor: '#F9FAFB',
   },
   selectorText: {
     fontSize: 16,
-    color: '#333',
+    color: '#1F2937',
   },
   optionList: {
-    marginBottom: 15,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   optionItem: {
-    paddingVertical: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
   },
   optionText: {
     fontSize: 16,
-    color: Color.colorPlum,
+    color: '#374151',
+  },
+  modalButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
   },
   modalButton: {
-    backgroundColor: Color.colorPlum,
-    paddingVertical: 10,
-    paddingHorizontal: 20,
-    borderRadius: 10,
-    marginTop: 10,
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
   },
-  modalButtonText: {
+  cancelButton: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+  },
+  cancelButtonText: {
+    color: '#6B7280',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  saveButton: {
+    backgroundColor: '#EC4899',
+  },
+  saveButtonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',

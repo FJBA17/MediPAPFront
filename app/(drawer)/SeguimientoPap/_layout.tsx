@@ -33,6 +33,9 @@ export default function SeguimientoPapLayout() {
             fontSize: 20,
             color: 'black',
           },
+          headerStyle: {
+            backgroundColor: '#faf0f5',
+          },
         }}
       />
     </Stack>
