@@ -1,5 +1,5 @@
-import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Dimensions, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Linking } from 'react-native';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, FlatList, Image, Dimensions, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
 import { Button, Icon, Input } from 'react-native-elements';
 import { MedicionesApi } from '../../../src/config/api/medicionesApi';
 import { LoadingModal } from '../../../src/components/Loading/LoadingModal';
@@ -24,6 +24,8 @@ export default function HomeScreen() {
   const [alertConfirmText, setAlertConfirmText] = useState('OK');
   const [showCancelButton, setShowCancelButton] = useState(false);
   const [showQRScanner, setShowQRScanner] = useState(false);
+  const [showFloatingButton, setShowFloatingButton] = useState(false);
+  const [currentRut, setCurrentRut] = useState('');
   
   // Obtener usuario y verificar si es admin
   const user = useAutorizacionStore(useShallow(state => state.user));
@@ -53,11 +55,6 @@ export default function HomeScreen() {
     }, [fetchCamposVisibles])
   );
 
-  // Esta llamada es redundante ya que useFocusEffect ya llamará a fetchCamposVisibles
-  // useEffect(() => {
-  //   fetchCamposVisibles();
-  // }, [fetchCamposVisibles]);
-
   async function buscarPaciente(rutEscaneado?: string) {
     const rutABuscar = rutEscaneado || rut;
 
@@ -77,8 +74,16 @@ export default function HomeScreen() {
         const datos = response.data.resultados[0];
         const vigenciaPap = datos.find(item => item.label === 'Vigencia Pap')?.valor || 'No Encontrado';
         const nombrePaciente = datos.find(item => item.label === 'Nombre Completo')?.valor || 'No Encontrado';
+        const rutCompleto = datos.find(item => item.label.toLowerCase().includes('rut'))?.valor || '';
+
+
+        //console.log('RUT completo encontrado:', rutCompleto);
 
         setPap(response.data.resultados);
+        setCurrentRut(rutCompleto); // Guardar el RUT con formato completo
+
+        // Mostrar botón flotante si vigenciaPap es "No"
+        setShowFloatingButton(vigenciaPap === 'NO');
 
         // Intenta guardar el historial solo si es necesario (y maneja posibles errores silenciosamente)
         try {
@@ -95,12 +100,14 @@ export default function HomeScreen() {
         }
       } else {
         setPap(null);
+        setShowFloatingButton(false);
         await guardarHistorial(rutABuscar, false);
         setAlertTitle('No se encontraron datos para el RUT ingresado.');
         setAlertVisible(true);
       }
     } catch (error) {
       await guardarHistorial(rutABuscar, false);
+      setShowFloatingButton(false);
       
       // Manejo especial para errores 404 (No encontrado)
       if (error.response && error.response.status === 404) {
@@ -171,6 +178,71 @@ export default function HomeScreen() {
       return [...campos].sort((a, b) => a.label.localeCompare(b.label));
     }
   }, []);
+
+  // Función para crear seguimiento PAP
+  const crearSeguimientoPap = async () => {
+    if (!currentRut || !user?.userName) {
+      //console.log('currentRut:', currentRut);
+
+      setAlertTitle('No se puede crear seguimiento: Información incompleta');
+      setAlertConfirmText('OK');
+      setShowCancelButton(false);
+      setAlertVisible(true);
+      return;
+    }
+    
+    try {
+      setIsLoading(true);
+      
+      // Comprobar que el RUT tiene el formato correcto (con guión)
+      if (!currentRut.includes('-')) {
+        setAlertTitle('Error en el formato del RUT. Contacte al administrador.');
+        setAlertConfirmText('OK');
+        setShowCancelButton(false);
+        setAlertVisible(true);
+        setIsLoading(false);
+        return;
+      }
+      
+      console.log('Creando seguimiento para RUT:', currentRut);
+      
+      // Crear seguimiento PAP
+      await MedicionesApi.post('/seguimientoPap', {
+        rut: currentRut
+      });
+      
+      // Cambiar estado a "No Contactada"
+      await MedicionesApi.post('/seguimientoEstado', {
+        rut: currentRut,
+        estado: "No Contactada",
+        userName: user.userName
+      });
+      
+      // Mostrar mensaje de éxito
+      setAlertTitle('Seguimiento PAP creado exitosamente');
+      setAlertConfirmText('OK');
+      setShowCancelButton(false);
+      setAlertVisible(true);
+      
+      // Ocultar el botón flotante después de crear el seguimiento
+      setShowFloatingButton(false);
+      
+    } catch (error) {
+      console.error("Error al crear seguimiento PAP:", error);
+      
+      let errorMsg = 'Error al crear seguimiento PAP. Intente nuevamente.';
+      if (error.response && error.response.data && error.response.data.message) {
+        errorMsg = error.response.data.message;
+      }
+      
+      setAlertTitle(errorMsg);
+      setAlertConfirmText('OK');
+      setShowCancelButton(false);
+      setAlertVisible(true);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const PapItem = ({ item }: { item: PapCamposVisible[] }) => {
     const [expanded, setExpanded] = useState(true);
@@ -305,6 +377,16 @@ export default function HomeScreen() {
               <VersionDisplay />
             </Text>
           </View>
+          
+          {/* Botón flotante para crear seguimiento PAP */}
+          {showFloatingButton && (
+            <TouchableOpacity 
+              style={styles.floatingButton}
+              onPress={crearSeguimientoPap}
+            >
+              <Icon name="add-circle" type="material" size={24} color="white" />
+            </TouchableOpacity>
+          )}
         </>
       )}
       <CustomAlert
@@ -482,5 +564,22 @@ const styles = StyleSheet.create({
     fontFamily: FontFamily.publicSansRegular,
     fontSize: FontSize.size_sm,
     marginTop: 10,
+  },
+  // Estilos para el botón flotante
+  floatingButton: {
+    position: 'absolute',
+    right: 20,
+    bottom: 80,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: Color.colorPlum,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 3,
   },
 });
