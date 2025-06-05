@@ -13,6 +13,13 @@ interface ArchivosCrearProps {
   onArchivoCreado: () => void;
 }
 
+interface Base64FileUpload {
+  fileName: string;
+  mimeType: string;
+  content: string;
+  isBase64: boolean;
+}
+
 const invalidCharacters = /[^a-zA-Z0-9.]/g;
 const formatFileName = (fileName: string): string => {
   return fileName.replace(invalidCharacters, '_');
@@ -25,7 +32,6 @@ const ArchivosCrear: React.FC<ArchivosCrearProps> = ({ onArchivoCreado }) => {
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const token = useAutorizacionStore(state => state.token);
-
 
   const pickDocument = async () => {
     try {
@@ -52,70 +58,7 @@ const ArchivosCrear: React.FC<ArchivosCrearProps> = ({ onArchivoCreado }) => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!selectedFile || selectedFile.canceled || selectedFile.assets.length === 0) {
-      setError('Por favor, selecciona un archivo Excel');
-      return;
-    }
-    
-    const file = selectedFile.assets[0];
-    setLoading(true);
-    setError('');
-    setUploadProgress(0);
-    
-    try {
-      // Crear FormData
-      const formData = new FormData();
-      formData.append('file', {
-        uri: file.uri,
-        type: file.mimeType || "application/octet-stream", //'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        name: file.name
-      } as any);
-      
-      // Usar Axios para subir el archivo con seguimiento de progreso/'Content-Type': 'multipart/form-data',
-      const response = await MedicionesApi.post('/pap/upload', formData, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-        },
-        onUploadProgress: (progressEvent) => {
-          const percentCompleted = progressEvent.total ? 
-            progressEvent.loaded / progressEvent.total : 0;
-          setUploadProgress(percentCompleted);
-        },
-        timeout: 60000, // 60 segundos de timeout
-        withCredentials: true,
-      });
-      
-      console.log('Archivo subido exitosamente:', response.data);
-      setLoading(false);
-      onArchivoCreado();
-    } catch (err: any) {
-      console.error('Error al subir el archivo:', err);
-      
-      //manejo de errores
-      let errorMessage = 'Error al subir el archivo. Por favor, intenta de nuevo.';
-      
-      if (err.response) {
-        // El servidor respondió con un código de error
-        console.log('Error response:', err.response.data);
-        errorMessage = err.response.data?.message || `Error del servidor: ${err.response.status}`;
-      } else if (err.request) {
-        // La petición se hizo pero no hubo respuesta
-        console.log('Error request:', err.request);
-        errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
-      } else {
-        // Error en la configuración de la petición
-        console.log('Error message:', err.message);
-        errorMessage = err.message || 'Error desconocido';
-      }
-      
-      setError(errorMessage);
-      setLoading(false);
-    }
-  };
-
-
-   const handleSubmitBase64 = async () => {
+  const handleSubmitBase64 = async () => {
     if (!selectedFile || selectedFile.canceled || selectedFile.assets.length === 0) {
       setError('Por favor, selecciona un archivo Excel o CSV');
       return;
@@ -127,12 +70,15 @@ const ArchivosCrear: React.FC<ArchivosCrearProps> = ({ onArchivoCreado }) => {
     setUploadProgress(0);
     
     try {
+      console.log('📤 Iniciando subida Base64 para:', file.name);
+      
       // Leer el archivo como base64
       const base64 = await FileSystem.readAsStringAsync(file.uri, {
         encoding: FileSystem.EncodingType.Base64,
       });
       
       setUploadProgress(0.5); // 50% al leer el archivo
+      console.log('📊 Archivo leído como Base64, tamaño:', base64.length);
       
       // Enviar como base64
       const response = await MedicionesApi.post('/pap/upload-base64', {
@@ -149,23 +95,24 @@ const ArchivosCrear: React.FC<ArchivosCrearProps> = ({ onArchivoCreado }) => {
       });
       
       setUploadProgress(1); // 100%
-      console.log('Archivo subido exitosamente (base64):', response.data);
+      console.log('✅ Archivo subido exitosamente (base64):', response.data);
       setLoading(false);
       onArchivoCreado();
       
     } catch (err: any) {
-      console.error('Error al subir el archivo (base64):', err);
+      console.error('❌ Error al subir el archivo (base64):', err);
       
       let errorMessage = 'Error al subir el archivo. Por favor, intenta de nuevo.';
       
       if (err.response) {
-        console.log('Error response:', err.response.data);
+        console.log('❌ Error response:', err.response.data);
+        console.log('❌ Status:', err.response.status);
         errorMessage = err.response.data?.message || `Error del servidor: ${err.response.status}`;
       } else if (err.request) {
-        console.log('Error request:', err.request);
+        console.log('❌ Error request - No response from server');
         errorMessage = 'No se pudo conectar con el servidor. Verifica tu conexión.';
       } else {
-        console.log('Error message:', err.message);
+        console.log('❌ Error message:', err.message);
         errorMessage = err.message || 'Error desconocido';
       }
       
@@ -201,13 +148,14 @@ const ArchivosCrear: React.FC<ArchivosCrearProps> = ({ onArchivoCreado }) => {
             unfilledColor={Color.colorLavenderblush}
             borderColor={Color.colorPlum}
           />
-
           <Text style={styles.progressText}>{`${Math.round(uploadProgress * 100)}%`}</Text>
         </View>
       )}
+
+      {/* ✅ SOLO el botón que usa Base64 */}
       <Button
         title="Subir Archivo"
-        onPress={handleSubmit}
+        onPress={handleSubmitBase64}
         loading={loading}
         disabled={!selectedFile || selectedFile.canceled || loading}
         buttonStyle={styles.submitButton}
@@ -215,16 +163,6 @@ const ArchivosCrear: React.FC<ArchivosCrearProps> = ({ onArchivoCreado }) => {
         disabledStyle={styles.disabledButton}
         disabledTitleStyle={styles.disabledButtonText}
       />
-      <Button
-          title="Subir Archivo (Base64)"
-          onPress={handleSubmitBase64}
-          loading={loading}
-          disabled={!selectedFile || selectedFile.canceled || loading}
-          buttonStyle={[styles.submitButton, styles.alternativeButton]}
-          titleStyle={styles.submitButtonText}
-          disabledStyle={styles.disabledButton}
-          disabledTitleStyle={styles.disabledButtonText}
-        />
     </View>
   );
 };
@@ -273,11 +211,6 @@ const styles = StyleSheet.create({
     borderRadius: Border.br_xs,
     padding: Padding.p_3xs,
   },
-
-  alternativeButton: {
-    backgroundColor: Color.colorMediumvioletred,
-  },
-
   submitButtonText: {
     fontFamily: FontFamily.publicSansMedium,
     fontSize: FontSize.size_base,
