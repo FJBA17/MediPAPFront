@@ -14,12 +14,15 @@ import {
   Animated,
   TouchableWithoutFeedback,
   Alert,
+  Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Icons } from '../../../src/components/Icons';
 import { Color, Padding } from '../../../src/theme/GlobalStyles';
 import { MedicionesApi } from '../../../src/config/api/medicionesApi';
 import { LoadingModal } from '../../../src/components/Loading/LoadingModal';
 import { StatusBar } from 'expo-status-bar';
+import CustomAlert from '../../../src/components/CustomAlert';
 
 interface Unidad {
   id: number;
@@ -58,6 +61,13 @@ export default function UnidadesScreen() {
   const [isUsuariosModalVisible, setIsUsuariosModalVisible] = useState(false);
   const [usuariosUnidad, setUsuariosUnidad] = useState<Usuario[]>([]);
   
+  // Estados para CustomAlert
+  const [alertVisible, setAlertVisible] = useState(false);
+  const [alertMessage, setAlertMessage] = useState('');
+  const [alertConfirmAction, setAlertConfirmAction] = useState<() => void>(() => {});
+  const [showCancelButton, setShowCancelButton] = useState(true);
+  const [confirmText, setConfirmText] = useState('Confirmar');
+  
   // Animaciones
   const modalY = useRef(new Animated.Value(1000)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
@@ -77,6 +87,7 @@ export default function UnidadesScreen() {
       ]);
     } catch (error) {
       console.error('Error al cargar datos:', error);
+      mostrarAlerta('Error al cargar datos', false);
     } finally {
       setIsLoading(false);
     }
@@ -88,6 +99,7 @@ export default function UnidadesScreen() {
       setUnidades(response.data);
     } catch (error) {
       console.error('Error al cargar unidades:', error);
+      mostrarAlerta('Error al cargar unidades', false);
     }
   };
 
@@ -104,6 +116,19 @@ export default function UnidadesScreen() {
     setRefreshing(true);
     await cargarDatos();
     setRefreshing(false);
+  };
+
+  // Función para mostrar alertas personalizadas
+  const mostrarAlerta = (mensaje: string, conCancelBtn: boolean = true, onConfirm?: () => void, btnText: string = 'OK') => {
+    setAlertMessage(mensaje);
+    setShowCancelButton(conCancelBtn);
+    setConfirmText(btnText);
+    if (onConfirm) {
+      setAlertConfirmAction(() => onConfirm);
+    } else {
+      setAlertConfirmAction(() => () => setAlertVisible(false));
+    }
+    setAlertVisible(true);
   };
 
   // Funciones del modal principal
@@ -185,7 +210,7 @@ export default function UnidadesScreen() {
       ]).start();
     } catch (error) {
       console.error('Error al cargar usuarios de la unidad:', error);
-      Alert.alert('Error', 'No se pudieron cargar los usuarios de la unidad');
+      mostrarAlerta('No se pudieron cargar los usuarios de la unidad', false);
     }
   };
 
@@ -207,7 +232,7 @@ export default function UnidadesScreen() {
 
   const guardarUnidad = async () => {
     if (!formData.nombre.trim()) {
-      Alert.alert('Error', 'El nombre de la unidad es requerido');
+      mostrarAlerta('El nombre de la unidad es requerido', false);
       return;
     }
 
@@ -222,11 +247,11 @@ export default function UnidadesScreen() {
       
       await cargarUnidades();
       closeModal();
-      Alert.alert('Éxito', modalMode === 'create' ? 'Unidad creada correctamente' : 'Unidad actualizada correctamente');
+      mostrarAlerta(modalMode === 'create' ? 'Unidad creada exitosamente' : 'Unidad actualizada exitosamente', false);
     } catch (error: any) {
       console.error('Error al guardar unidad:', error);
       const mensaje = error.response?.data?.message || 'Error al guardar la unidad';
-      Alert.alert('Error', mensaje);
+      mostrarAlerta(mensaje, false);
     } finally {
       setIsLoading(false);
     }
@@ -237,42 +262,39 @@ export default function UnidadesScreen() {
       setIsLoading(true);
       await MedicionesApi.patch(`/unidades/${unidad.id}/toggle-active`);
       await cargarUnidades();
-      Alert.alert('Éxito', `Unidad ${unidad.activa ? 'desactivada' : 'activada'} correctamente`);
+      mostrarAlerta(`Unidad ${unidad.activa ? 'desactivada' : 'activada'} exitosamente`, false);
     } catch (error: any) {
       console.error('Error al cambiar estado:', error);
       const mensaje = error.response?.data?.message || 'Error al cambiar el estado';
-      Alert.alert('Error', mensaje);
+      mostrarAlerta(mensaje, false);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const eliminarUnidad = (unidad: Unidad) => {
-    Alert.alert(
-      'Confirmar eliminación',
+  const confirmarEliminarUnidad = (unidad: Unidad) => {
+    mostrarAlerta(
       `¿Estás seguro de que quieres eliminar la unidad "${unidad.nombre}"?`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { 
-          text: 'Eliminar', 
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              setIsLoading(true);
-              await MedicionesApi.delete(`/unidades/${unidad.id}`);
-              await cargarUnidades();
-              Alert.alert('Éxito', 'Unidad eliminada correctamente');
-            } catch (error: any) {
-              console.error('Error al eliminar unidad:', error);
-              const mensaje = error.response?.data?.message || 'Error al eliminar la unidad';
-              Alert.alert('Error', mensaje);
-            } finally {
-              setIsLoading(false);
-            }
-          }
-        }
-      ]
+      true,
+      () => eliminarUnidad(unidad),
+      'Eliminar'
     );
+  };
+
+  const eliminarUnidad = async (unidad: Unidad) => {
+    try {
+      setIsLoading(true);
+      await MedicionesApi.delete(`/unidades/${unidad.id}`);
+      await cargarUnidades();
+      setAlertVisible(false);
+      mostrarAlerta('Unidad eliminada exitosamente', false);
+    } catch (error: any) {
+      console.error('Error al eliminar unidad:', error);
+      const mensaje = error.response?.data?.message || 'Error al eliminar la unidad';
+      mostrarAlerta(mensaje, false);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const formatearFecha = (fecha: string) => {
@@ -281,242 +303,309 @@ export default function UnidadesScreen() {
 
   return (
     <View style={styles.container}>
-      {/* Header con botón crear */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Gestión de Unidades</Text>
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => openModal('create')}
-        >
-          <Icons name="add" size={24} color="white" />
-        </TouchableOpacity>
-      </View>
-
-      <ScrollView
-        style={styles.scrollView}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-        }
+      <LinearGradient
+        colors={['#b52e69', 'white']}
+        style={styles.gradient}
       >
-        {unidades.map((unidad) => (
-          <View key={unidad.id} style={styles.unidadCard}>
-            <View style={styles.unidadHeader}>
-              <View style={styles.unidadInfo}>
-                <Text style={styles.unidadNombre}>{unidad.nombre}</Text>
-                {unidad.descripcion && (
-                  <Text style={styles.unidadDescripcion}>{unidad.descripcion}</Text>
-                )}
-                <Text style={styles.unidadFecha}>
-                  Creada: {formatearFecha(unidad.fechaCreacion)}
-                </Text>
+        {/* Header con botón crear */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Gestión de Unidades</Text>
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => openModal('create')}
+          >
+            <LinearGradient
+              colors={['#f08fb8', '#b52e69']}
+              style={styles.addButtonGradient}
+            >
+              <Icons name="add" size={24} color="white" />
+            </LinearGradient>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView
+          style={styles.scrollView}
+          contentContainerStyle={styles.scrollContent}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+        >
+          {unidades.length > 0 ? (
+            unidades.map((unidad) => (
+              <View key={unidad.id} style={styles.unidadCard}>
+                <View style={styles.unidadHeader}>
+                  <View style={styles.unidadInfo}>
+                    <Text style={styles.unidadNombre}>{unidad.nombre}</Text>
+                    {unidad.descripcion && (
+                      <Text style={styles.unidadDescripcion}>{unidad.descripcion}</Text>
+                    )}
+                    <Text style={styles.unidadFecha}>
+                      Creada: {formatearFecha(unidad.fechaCreacion)}
+                    </Text>
+                  </View>
+                  <View style={styles.unidadStatus}>
+                    <View style={[
+                      styles.statusBadge,
+                      { backgroundColor: unidad.activa ? '#4CAF50' : '#FF5722' }
+                    ]}>
+                      <Text style={styles.statusText}>
+                        {unidad.activa ? 'Activa' : 'Inactiva'}
+                      </Text>
+                    </View>
+                  </View>
+                </View>
+
+                <View style={styles.unidadActions}>
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.viewButton]}
+                    onPress={() => verUsuariosUnidad(unidad.id)}
+                  >
+                    <Icons name="people-outline" size={16} color="white" />
+                    <Text style={styles.actionButtonText}>Ver Usuarios</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.editButton]}
+                    onPress={() => openModal('edit', unidad)}
+                  >
+                    <Icons name="create-outline" size={16} color="white" />
+                    <Text style={styles.actionButtonText}>Editar</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.actionButton, unidad.activa ? styles.deactivateButton : styles.activateButton]}
+                    onPress={() => toggleEstadoUnidad(unidad)}
+                  >
+                    <Icons name={unidad.activa ? "pause-outline" : "play-outline"} size={16} color="white" />
+                    <Text style={styles.actionButtonText}>
+                      {unidad.activa ? 'Desactivar' : 'Activar'}
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.actionButton, styles.deleteButton]}
+                    onPress={() => confirmarEliminarUnidad(unidad)}
+                  >
+                    <Icons name="trash-outline" size={16} color="white" />
+                    <Text style={styles.actionButtonText}>Eliminar</Text>
+                  </TouchableOpacity>
+                </View>
               </View>
-              <View style={styles.unidadStatus}>
-                <View style={[
-                  styles.statusBadge,
-                  { backgroundColor: unidad.activa ? '#4CAF50' : '#FF5722' }
-                ]}>
-                  <Text style={styles.statusText}>
-                    {unidad.activa ? 'Activa' : 'Inactiva'}
+            ))
+          ) : (
+            <View style={styles.emptyStateContainer}>
+              <Icons name="cube-outline" size={64} color="#e0e0e0" />
+              <Text style={styles.emptyStateText}>No hay unidades disponibles</Text>
+              <Text style={styles.emptyStateSubtext}>Crea una nueva unidad con el botón +</Text>
+            </View>
+          )}
+          <View style={styles.spacer} />
+        </ScrollView>
+
+        {/* Modal de Crear/Editar Unidad */}
+        <Modal
+          visible={isModalVisible}
+          transparent
+          animationType="none"
+          onRequestClose={closeModal}
+          statusBarTranslucent={true}
+        >
+          {isModalVisible && <StatusBar translucent backgroundColor="rgba(0,0,0,0)" style="light" />}
+          <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
+            <TouchableWithoutFeedback onPress={closeModal}>
+              <View style={StyleSheet.absoluteFill} />
+            </TouchableWithoutFeedback>
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.modalView,
+              { transform: [{ translateY: modalY }] }
+            ]}
+          >
+            <LinearGradient
+              colors={['#b52e69', '#f5f5f5']}
+              style={styles.modalGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 0.2 }}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>
+                  {modalMode === 'create' ? 'Crear Unidad' : 'Editar Unidad'}
+                </Text>
+                <TouchableOpacity onPress={closeModal} style={styles.closeButton}>
+                  <Icons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalContent}>
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Nombre *</Text>
+                  <View style={styles.inputWrapper}>
+                    <Icons name="briefcase-outline" size={20} color="#a33d69" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.textInput}
+                      placeholder="Ingrese el nombre de la unidad"
+                      value={formData.nombre}
+                      onChangeText={(text) => setFormData({...formData, nombre: text})}
+                      placeholderTextColor="#999"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.inputGroup}>
+                  <Text style={styles.inputLabel}>Descripción (opcional)</Text>
+                  <View style={styles.inputWrapper}>
+                    <Icons name="create-outline" size={20} color="#a33d69" style={styles.inputIcon} />
+                    <TextInput
+                      style={[styles.textInput, styles.textArea]}
+                      placeholder="Ingrese una descripción"
+                      value={formData.descripcion}
+                      onChangeText={(text) => setFormData({...formData, descripcion: text})}
+                      placeholderTextColor="#999"
+                      multiline
+                      numberOfLines={3}
+                      textAlignVertical="top"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.switchSection}>
+                  <View style={styles.switchContainer}>
+                    <View style={styles.switchInfo}>
+                      <Icons name="power-outline" size={20} color="#a33d69" />
+                      <Text style={styles.switchLabel}>Estado</Text>
+                    </View>
+                    <TouchableOpacity
+                      style={[
+                        styles.switch,
+                        { backgroundColor: formData.activa ? '#4CAF50' : '#ccc' }
+                      ]}
+                      onPress={() => setFormData({...formData, activa: !formData.activa})}
+                    >
+                      <View style={[
+                        styles.switchThumb,
+                        { transform: [{ translateX: formData.activa ? 20 : 0 }] }
+                      ]} />
+                    </TouchableOpacity>
+                    <Text style={styles.switchValue}>
+                      {formData.activa ? 'Activa' : 'Inactiva'}
+                    </Text>
+                  </View>
+                  <Text style={styles.switchDescription}>
+                    Determina si la unidad estará disponible en el sistema
                   </Text>
                 </View>
-              </View>
-            </View>
 
-            <View style={styles.unidadActions}>
-              <TouchableOpacity
-                style={[styles.actionButton, styles.viewButton]}
-                onPress={() => verUsuariosUnidad(unidad.id)}
-              >
-                <Icons name="people-outline" size={16} color="white" />
-                <Text style={styles.actionButtonText}>Ver Usuarios</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, styles.editButton]}
-                onPress={() => openModal('edit', unidad)}
-              >
-                <Icons name="create-outline" size={16} color="white" />
-                <Text style={styles.actionButtonText}>Editar</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, unidad.activa ? styles.deactivateButton : styles.activateButton]}
-                onPress={() => toggleEstadoUnidad(unidad)}
-              >
-                <Icons name={unidad.activa ? "pause-outline" : "play-outline"} size={16} color="white" />
-                <Text style={styles.actionButtonText}>
-                  {unidad.activa ? 'Desactivar' : 'Activar'}
-                </Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.actionButton, styles.deleteButton]}
-                onPress={() => eliminarUnidad(unidad)}
-              >
-                <Icons name="trash-outline" size={16} color="white" />
-                <Text style={styles.actionButtonText}>Eliminar</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        ))}
-      </ScrollView>
-
-      {/* Modal de Crear/Editar Unidad */}
-      <Modal
-        visible={isModalVisible}
-        transparent
-        animationType="none"
-        onRequestClose={closeModal}
-        statusBarTranslucent={true}
-      >
-        {isModalVisible && <StatusBar translucent backgroundColor="rgba(0,0,0,0)" style="light" />}
-        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}>
-          <TouchableWithoutFeedback onPress={closeModal}>
-            <View style={StyleSheet.absoluteFill} />
-          </TouchableWithoutFeedback>
-        </Animated.View>
-
-        <Animated.View
-          style={[
-            styles.modalView,
-            { transform: [{ translateY: modalY }] }
-          ]}
-        >
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>
-              {modalMode === 'create' ? 'Crear Unidad' : 'Editar Unidad'}
-            </Text>
-            <TouchableOpacity onPress={closeModal}>
-              <Icons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.modalContent}>
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Nombre *</Text>
-              <TextInput
-                style={styles.textInput}
-                placeholder="Ingrese el nombre de la unidad"
-                value={formData.nombre}
-                onChangeText={(text) => setFormData({...formData, nombre: text})}
-                placeholderTextColor="#999"
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Descripción (opcional)</Text>
-              <TextInput
-                style={[styles.textInput, styles.textArea]}
-                placeholder="Ingrese una descripción"
-                value={formData.descripcion}
-                onChangeText={(text) => setFormData({...formData, descripcion: text})}
-                placeholderTextColor="#999"
-                multiline
-                numberOfLines={3}
-              />
-            </View>
-
-            <View style={styles.inputGroup}>
-              <View style={styles.switchContainer}>
-                <Text style={styles.inputLabel}>Estado</Text>
-                <TouchableOpacity
-                  style={[
-                    styles.switch,
-                    { backgroundColor: formData.activa ? '#4CAF50' : '#ccc' }
-                  ]}
-                  onPress={() => setFormData({...formData, activa: !formData.activa})}
-                >
-                  <View style={[
-                    styles.switchThumb,
-                    { transform: [{ translateX: formData.activa ? 20 : 0 }] }
-                  ]} />
-                </TouchableOpacity>
-                <Text style={styles.switchLabel}>
-                  {formData.activa ? 'Activa' : 'Inactiva'}
-                </Text>
-              </View>
-            </View>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
-                onPress={closeModal}
-              >
-                <Text style={styles.cancelButtonText}>Cancelar</Text>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[styles.modalButton, styles.saveButton]}
-                onPress={guardarUnidad}
-              >
-                <Text style={styles.saveButtonText}>
-                  {modalMode === 'create' ? 'Crear' : 'Guardar'}
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Animated.View>
-      </Modal>
-
-      {/* Modal de Usuarios de la Unidad */}
-      <Modal
-        visible={isUsuariosModalVisible}
-        transparent
-        animationType="none"
-        onRequestClose={closeUsuariosModal}
-        statusBarTranslucent={true}
-      >
-        {isUsuariosModalVisible && <StatusBar translucent backgroundColor="rgba(0,0,0,0)" style="light" />}
-        <Animated.View style={[styles.overlay, { opacity: usuariosOverlayOpacity }]}>
-          <TouchableWithoutFeedback onPress={closeUsuariosModal}>
-            <View style={StyleSheet.absoluteFill} />
-          </TouchableWithoutFeedback>
-        </Animated.View>
-
-        <Animated.View
-          style={[
-            styles.modalView,
-            { transform: [{ translateY: usuariosModalY }] }
-          ]}
-        >
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Usuarios de la Unidad</Text>
-            <TouchableOpacity onPress={closeUsuariosModal}>
-              <Icons name="close" size={24} color="#666" />
-            </TouchableOpacity>
-          </View>
-
-          <ScrollView style={styles.usuariosContainer}>
-            {usuariosUnidad.length > 0 ? (
-              usuariosUnidad.map((usuario, index) => (
-                <View key={index} style={styles.usuarioItem}>
-                  <View style={styles.usuarioInfo}>
-                    <Text style={styles.usuarioNombre}>
-                      {usuario.nombre} {usuario.apellido}
-                    </Text>
-                    <Text style={styles.usuarioEmail}>{usuario.email}</Text>
-                    <Text style={styles.usuarioUserName}>@{usuario.userName}</Text>
-                  </View>
-                  {usuario.isAdmin && (
-                    <View style={styles.adminBadge}>
-                      <Text style={styles.adminBadgeText}>Admin</Text>
-                    </View>
-                  )}
+                <View style={styles.modalActions}>
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.cancelButton]}
+                    onPress={closeModal}
+                  >
+                    <Text style={styles.cancelButtonText}>Cancelar</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={[styles.modalButton, styles.saveButton]}
+                    onPress={guardarUnidad}
+                  >
+                    <LinearGradient
+                      colors={['#b52e69', '#f08fb8']}
+                      style={styles.saveButtonGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                    >
+                      <Text style={styles.saveButtonText}>
+                        {modalMode === 'create' ? 'Crear' : 'Guardar'}
+                      </Text>
+                    </LinearGradient>
+                  </TouchableOpacity>
                 </View>
-              ))
-            ) : (
-              <View style={styles.emptyState}>
-                <Icons name="people-outline" size={48} color="#ccc" />
-                <Text style={styles.emptyStateText}>
-                  No hay usuarios asignados a esta unidad
-                </Text>
               </View>
-            )}
-          </ScrollView>
-        </Animated.View>
-      </Modal>
+            </LinearGradient>
+          </Animated.View>
+        </Modal>
 
-      {isLoading && <LoadingModal visible={true} />}
+        {/* Modal de Usuarios de la Unidad */}
+        <Modal
+          visible={isUsuariosModalVisible}
+          transparent
+          animationType="none"
+          onRequestClose={closeUsuariosModal}
+          statusBarTranslucent={true}
+        >
+          {isUsuariosModalVisible && <StatusBar translucent backgroundColor="rgba(0,0,0,0)" style="light" />}
+          <Animated.View style={[styles.overlay, { opacity: usuariosOverlayOpacity }]}>
+            <TouchableWithoutFeedback onPress={closeUsuariosModal}>
+              <View style={StyleSheet.absoluteFill} />
+            </TouchableWithoutFeedback>
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.modalView,
+              { transform: [{ translateY: usuariosModalY }] }
+            ]}
+          >
+            <LinearGradient
+              colors={['#b52e69', '#f5f5f5']}
+              style={styles.modalGradient}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 0, y: 0.2 }}
+            >
+              <View style={styles.modalHeader}>
+                <Text style={styles.modalTitle}>Usuarios de la Unidad</Text>
+                <TouchableOpacity onPress={closeUsuariosModal} style={styles.closeButton}>
+                  <Icons name="close" size={24} color="#fff" />
+                </TouchableOpacity>
+              </View>
+
+              <ScrollView style={styles.usuariosContainer}>
+                {usuariosUnidad.length > 0 ? (
+                  usuariosUnidad.map((usuario, index) => (
+                    <View key={index} style={styles.usuarioItem}>
+                      <View style={styles.usuarioAvatar}>
+                        <Icons name="person" size={24} color="#a33d69" />
+                      </View>
+                      <View style={styles.usuarioInfo}>
+                        <Text style={styles.usuarioNombre}>
+                          {usuario.nombre} {usuario.apellido}
+                        </Text>
+                        <Text style={styles.usuarioEmail}>{usuario.email}</Text>
+                        <Text style={styles.usuarioUserName}>@{usuario.userName}</Text>
+                      </View>
+                      {usuario.isAdmin && (
+                        <View style={styles.adminBadge}>
+                          <Text style={styles.adminBadgeText}>Admin</Text>
+                        </View>
+                      )}
+                    </View>
+                  ))
+                ) : (
+                  <View style={styles.emptyState}>
+                    <Icons name="people-outline" size={48} color="#ccc" />
+                    <Text style={styles.emptyStateText}>
+                      No hay usuarios asignados a esta unidad
+                    </Text>
+                  </View>
+                )}
+              </ScrollView>
+            </LinearGradient>
+          </Animated.View>
+        </Modal>
+
+        {/* CustomAlert para mensajes y confirmaciones */}
+        <CustomAlert
+          visible={alertVisible}
+          title={alertMessage}
+          onConfirm={alertConfirmAction}
+          onCancel={() => setAlertVisible(false)}
+          confirmText={confirmText}
+          showCancelButton={showCancelButton}
+        />
+
+        {isLoading && <LoadingModal visible={true} />}
+      </LinearGradient>
     </View>
   );
 }
@@ -524,31 +613,55 @@ export default function UnidadesScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Color.colorLavenderblush,
+  },
+  gradient: {
+    flex: 1,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    paddingHorizontal: Padding.p_base,
+    paddingBottom: 20,
+    flexGrow: 1,
+  },
+  spacer: {
+    height: 20,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: Padding.p_base,
-    paddingBottom: 10,
+    paddingTop: Platform.OS === 'ios' ? 50 : 20,
+    paddingBottom: 20,
   },
   headerTitle: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
-    color: '#1f0a12',
+    color: '#fff',
   },
   addButton: {
-    backgroundColor: '#f08fb8',
-    borderRadius: 25,
     width: 50,
     height: 50,
     justifyContent: 'center',
     alignItems: 'center',
+    borderRadius: 25,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4.65,
+    elevation: 8,
   },
-  scrollView: {
-    flex: 1,
-    paddingHorizontal: Padding.p_base,
+  addButtonGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   unidadCard: {
     backgroundColor: 'white',
@@ -556,7 +669,15 @@ const styles = StyleSheet.create({
     padding: 15,
     marginBottom: 15,
     borderWidth: 1,
-    borderColor: '#f08fb8',
+    borderColor: '#ebc7d6',
+    shadowColor: '#a33d69',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   unidadHeader: {
     flexDirection: 'row',
@@ -628,6 +749,25 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: 'bold',
   },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 50,
+  },
+  emptyStateText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#666',
+    marginTop: 15,
+  },
+  emptyStateSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
+  },
+  
+  // Modal styles
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
@@ -640,20 +780,30 @@ const styles = StyleSheet.create({
     backgroundColor: 'white',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
-    maxHeight: '80%',
+    maxHeight: '90%',
+    overflow: 'hidden',
+  },
+  modalGradient: {
+    flex: 1,
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
   },
   modalTitle: {
-    fontSize: 20,
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#1f0a12',
+    color: '#fff',
+  },
+  closeButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalContent: {
     padding: 20,
@@ -662,27 +812,77 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   inputLabel: {
-    fontSize: 16,
-    fontWeight: 'bold',
+    fontSize: 14,
+    fontWeight: '600',
     color: '#1f0a12',
     marginBottom: 8,
+    marginLeft: 5,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
+    paddingHorizontal: 15,
+    shadowColor: '#1f0a12',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  inputIcon: {
+    marginRight: 12,
   },
   textInput: {
-    borderWidth: 1,
-    borderColor: '#f08fb8',
-    borderRadius: 10,
-    padding: 12,
+    flex: 1,
     fontSize: 16,
-    backgroundColor: 'white',
+    color: '#1f0a12',
+    paddingVertical: 12,
   },
   textArea: {
     height: 80,
-    textAlignVertical: 'top',
+    paddingTop: 12,
+  },
+  
+  // Switch styles
+  switchSection: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
   },
   switchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
+    marginBottom: 8,
+  },
+  switchInfo: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  switchLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f0a12',
+    marginLeft: 8,
+  },
+  switchValue: {
+    fontSize: 14,
+    color: '#1f0a12',
+    marginLeft: 10,
+  },
+  switchDescription: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 28,
   },
   switch: {
     width: 50,
@@ -697,10 +897,8 @@ const styles = StyleSheet.create({
     borderRadius: 13,
     backgroundColor: 'white',
   },
-  switchLabel: {
-    fontSize: 16,
-    color: '#1f0a12',
-  },
+  
+  // Modal action buttons
   modalActions: {
     flexDirection: 'row',
     gap: 12,
@@ -708,15 +906,20 @@ const styles = StyleSheet.create({
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 15,
-    borderRadius: 10,
-    alignItems: 'center',
+    borderRadius: 15,
+    overflow: 'hidden',
   },
   cancelButton: {
     backgroundColor: '#E0E0E0',
+    paddingVertical: 15,
+    alignItems: 'center',
   },
   saveButton: {
-    backgroundColor: '#f08fb8',
+    overflow: 'hidden',
+  },
+  saveButtonGradient: {
+    paddingVertical: 15,
+    alignItems: 'center',
   },
   cancelButtonText: {
     color: '#666',
@@ -728,18 +931,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  
+  // Usuarios modal styles
   usuariosContainer: {
-    maxHeight: 400,
     padding: 20,
+    maxHeight: '80%',
   },
   usuarioItem: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f8f9fa',
+    backgroundColor: '#fff',
     padding: 15,
-    borderRadius: 10,
+    borderRadius: 15,
     marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
+    shadowColor: '#1f0a12',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  usuarioAvatar: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: 'rgba(243, 145, 185, 0.1)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
   },
   usuarioInfo: {
     flex: 1,
@@ -760,7 +983,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   adminBadge: {
-    backgroundColor: '#f08fb8',
+    backgroundColor: '#b52e69',
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
