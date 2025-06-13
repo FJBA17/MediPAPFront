@@ -1,16 +1,21 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, FlatList, StyleSheet, ActivityIndicator } from 'react-native';
+import React, { useState, useCallback } from 'react';
+import {
+  View,
+  Text,
+  FlatList,
+  StyleSheet,
+  ActivityIndicator,
+} from 'react-native';
 import { MedicionesApi } from '../../../src/config/api/medicionesApi';
 import { useFocusEffect } from 'expo-router';
-import { Button, Icon } from 'react-native-elements';
+import { Button } from 'react-native-elements';
 import { FontFamily, FontSize, Color, Border, Padding } from '../../../src/theme/GlobalStyles';
 import { FloatingActionButton } from '../../../src/components/FAB';
 import { LoadingModal } from '../../../src/components/Loading/LoadingModal';
 import { ModalContainer } from '../../../src/components/ModalContainer';
-import { useCallback } from 'react';
 import { Icons } from '../../../src/components/Icons';
+import { LinearGradient } from 'expo-linear-gradient';
 
-// Importar componentes de los modales
 import CrearUsuarioForm from './CrearUsuarioForm';
 import EditarUsuarioForm from './EditarUsuarioForm';
 
@@ -21,6 +26,11 @@ interface Usuario {
   apellido: string;
   fechaCreacion: string;
   isAdmin: boolean;
+  unidad?: {
+    id: number;
+    nombre: string;
+    descripcion?: string;
+  };
 }
 
 export default function Usuarios() {
@@ -28,8 +38,7 @@ export default function Usuarios() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState(false);
-  
-  // Estados para controlar la visualización de los modales
+
   const [crearModalVisible, setCrearModalVisible] = useState(false);
   const [editarModalVisible, setEditarModalVisible] = useState(false);
   const [confirmarModalVisible, setConfirmarModalVisible] = useState(false);
@@ -38,13 +47,9 @@ export default function Usuarios() {
   const [deleteTitle, setDeleteTitle] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Usamos useFocusEffect para obtener los datos cuando la pantalla obtiene el foco
   useFocusEffect(
     useCallback(() => {
       fetchUsuarios();
-      return () => {
-        // Cleanup (opcional)
-      };
     }, [])
   );
 
@@ -63,38 +68,27 @@ export default function Usuarios() {
     }
   };
 
-  // Funciones para abrir modales
-  const abrirModalCrearUsuario = () => {
-    setCrearModalVisible(true);
-  };
-
+  const abrirModalCrearUsuario = () => setCrearModalVisible(true);
   const abrirModalEditarUsuario = (usuario) => {
     setUsuarioSeleccionado(usuario);
     setEditarModalVisible(true);
   };
-
   const abrirModalConfirmar = (userName: string) => {
     setUserToDelete(userName);
     setDeleteTitle(`¿Estás seguro de que quieres eliminar al usuario ${userName}?`);
     setConfirmarModalVisible(true);
   };
 
-  // Funciones para cerrar modales
-  const cerrarModalCrear = () => {
-    setCrearModalVisible(false);
-  };
-
+  const cerrarModalCrear = () => setCrearModalVisible(false);
   const cerrarModalEditar = () => {
     setEditarModalVisible(false);
     setUsuarioSeleccionado(null);
   };
-
   const cerrarModalConfirmar = () => {
     setConfirmarModalVisible(false);
     setUserToDelete(null);
   };
 
-  // Funciones para manejar acciones de modales
   const handleUsuarioCreado = () => {
     cerrarModalCrear();
     fetchUsuarios();
@@ -107,7 +101,6 @@ export default function Usuarios() {
 
   const handleConfirmDelete = async () => {
     if (!userToDelete || isDeleting) return;
-    
     try {
       setIsDeleting(true);
       await MedicionesApi.delete(`/usuarios/${userToDelete}`);
@@ -128,7 +121,8 @@ export default function Usuarios() {
           <Text style={styles.userInfo}>{`${item.nombre} ${item.apellido}
 ${item.email}
 Admin: ${item.isAdmin ? 'Sí' : 'No'}
-Creado: ${new Date(item.fechaCreacion).toLocaleDateString()}`}</Text>
+Unidad: ${item.unidad?.nombre || 'Sin asignar'}
+`}</Text>
         </View>
       </View>
       <View>
@@ -147,32 +141,27 @@ Creado: ${new Date(item.fechaCreacion).toLocaleDateString()}`}</Text>
     </View>
   );
 
-  if (loading) {
-    return <LoadingModal visible={true} />;
-  }
-
-  if (error) {
-    return <View style={styles.centered}><Text>{error}</Text></View>;
-  }
+  if (loading) return <LoadingModal visible={true} />;
+  if (error) return <View style={styles.centered}><Text>{error}</Text></View>;
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#b52e69', 'white']} style={styles.gradient}>
       <FlatList
         data={usuarios}
         renderItem={renderUsuario}
         keyExtractor={(item) => item.userName}
+        contentContainerStyle={styles.container}
         ListEmptyComponent={
           loadError
             ? <Text style={styles.emptyText}>Error al cargar los usuarios. Por favor, intente más tarde.</Text>
             : <Text style={styles.emptyText}>No hay usuarios para mostrar</Text>
         }
       />
-      
+
       {!loadError && (
         <FloatingActionButton onPress={abrirModalCrearUsuario} />
       )}
 
-      {/* Modal para crear usuario */}
       <ModalContainer
         titulo="Nuevo Usuario"
         modalVisible={crearModalVisible}
@@ -181,7 +170,6 @@ Creado: ${new Date(item.fechaCreacion).toLocaleDateString()}`}</Text>
         <CrearUsuarioForm onUsuarioCreado={handleUsuarioCreado} />
       </ModalContainer>
 
-      {/* Modal para editar usuario */}
       <ModalContainer
         titulo="Editar Usuario"
         modalVisible={editarModalVisible}
@@ -196,7 +184,6 @@ Creado: ${new Date(item.fechaCreacion).toLocaleDateString()}`}</Text>
         )}
       </ModalContainer>
 
-      {/* Modal de confirmación para eliminar */}
       <ModalContainer
         titulo="Confirmar acción"
         modalVisible={confirmarModalVisible}
@@ -204,14 +191,12 @@ Creado: ${new Date(item.fechaCreacion).toLocaleDateString()}`}</Text>
       >
         <View style={styles.confirmContent}>
           <Text style={styles.confirmTitle}>{deleteTitle}</Text>
-          
           <View style={styles.confirmButtonsContainer}>
             <Button
               title="Cancelar"
               buttonStyle={[styles.confirmButton, styles.cancelButton]}
               onPress={cerrarModalConfirmar}
             />
-            
             <Button
               title={isDeleting ? "Eliminando..." : "Confirmar"}
               buttonStyle={[styles.confirmButton, styles.deleteButton]}
@@ -221,14 +206,15 @@ Creado: ${new Date(item.fechaCreacion).toLocaleDateString()}`}</Text>
           </View>
         </View>
       </ModalContainer>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  gradient: {
     flex: 1,
-    backgroundColor: Color.colorLavenderblush,
+  },
+  container: {
     padding: Padding.p_base,
     paddingBottom: 100,
   },
@@ -272,15 +258,10 @@ const styles = StyleSheet.create({
     marginBottom: Padding.p_xs,
   },
   editButton: {
-    backgroundColor: Color.colorPlum,
+    backgroundColor: '#b52e69',
   },
   deleteButton: {
     backgroundColor: Color.colorPink,
-  },
-  buttonText: {
-    fontFamily: FontFamily.publicSansMedium,
-    fontSize: FontSize.size_sm,
-    color: Color.colorBlack,
   },
   centered: {
     flex: 1,
@@ -290,14 +271,12 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: FontFamily.publicSansRegular,
     fontSize: FontSize.size_base,
-    color: Color.colorBlack,
+    color: Color.colorWhite,
     textAlign: 'center',
     marginTop: Padding.p_xl,
   },
-  // Estilos para el modal de confirmación
   confirmContent: {
     width: '100%',
-    
   },
   confirmTitle: {
     fontFamily: FontFamily.publicSansMedium,
@@ -307,18 +286,17 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   confirmButtonsContainer: {
-    flexDirection : 'row',
-    alignItems : 'center',
-    justifyContent : 'space-between',
-    paddingHorizontal : 20,
-    width : '100%',
-    marginTop : 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    width: '100%',
+    marginTop: 10,
   },
   confirmButton: {
     borderRadius: 20,
     width: 150,
-    height : 50,
-    
+    height: 50,
   },
   cancelButton: {
     backgroundColor: Color.colorPlum,

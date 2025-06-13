@@ -2,7 +2,6 @@ import React from 'react';
 import { Modal, View, Text, TouchableOpacity, StyleSheet, Dimensions } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 
-// Definimos el valor de opacidad en una constante para asegurar consistencia
 const BACKGROUND_OPACITY = 0.5;
 const BACKGROUND_COLOR = `rgba(0, 0, 0, ${BACKGROUND_OPACITY})`;
 
@@ -27,14 +26,12 @@ const CustomAlert: React.FC<CustomAlertProps> = ({
 }) => {
   return (
     <Modal
-      transparent={true}
+      transparent
       visible={visible}
       animationType="fade"
-      statusBarTranslucent={true}
+      statusBarTranslucent
     >
-      {/* Establecemos el mismo valor de opacidad para el StatusBar */}
       {visible && <StatusBar translucent backgroundColor="rgba(0,0,0,0)" style="light" />}
-
       <View style={styles.centeredView}>
         <View style={styles.modalView}>
           <Text style={styles.modalTitle}>{title}</Text>
@@ -71,35 +68,27 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: BACKGROUND_COLOR, // Usamos la misma constante aquí
+    backgroundColor: BACKGROUND_COLOR,
   },
   modalView: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 35,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 30,
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    width: width * 0.8, 
-    maxWidth: 400 
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 6,
+    width: width * 0.8,
+    maxWidth: 400,
   },
   modalTitle: {
-    marginBottom: 25,
+    marginBottom: 20,
     textAlign: 'center',
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#000'
-  },
-  modalText: {
-    marginBottom: 15,
-    textAlign: 'center',
-    fontSize: 16,
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#333',
   },
   buttonContainer: {
     flexDirection: 'row',
@@ -107,25 +96,27 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   button: {
-    borderRadius: 20,
-    padding: 10,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
     elevation: 2,
     minWidth: 100,
   },
   cancelButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: '#e6e6e6',
+    marginRight: 10,
   },
   confirmButton: {
-    backgroundColor: '#9E76AB',
+    backgroundColor: '#b52e69',
   },
   cancelButtonText: {
-    color: 'black',
-    fontWeight: 'bold',
+    color: '#333',
+    fontWeight: '600',
     textAlign: 'center',
   },
   confirmButtonText: {
-    color: 'white',
-    fontWeight: 'bold',
+    color: '#fff',
+    fontWeight: '600',
     textAlign: 'center',
   },
   singleButtonContainer: {

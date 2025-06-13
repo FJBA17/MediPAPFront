@@ -8,7 +8,7 @@ const VersionDisplay = () => {
   
   return (
     <View>
-      <Text>Versión: {appVersion}</Text>
+      <Text style={{color:'#b52e69'}} >Versión: {appVersion}</Text>
     </View>
   );
 };

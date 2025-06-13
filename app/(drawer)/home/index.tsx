@@ -1,6 +1,8 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, FlatList, Image, Dimensions, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Linking, Alert } from 'react-native';
+import { View, Text, StyleSheet, FlatList, Image, Dimensions, KeyboardAvoidingView, Platform, ScrollView, TouchableOpacity, Linking, Alert, TextInput } from 'react-native';
 import { Button, Icon, Input } from 'react-native-elements';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { MedicionesApi } from '../../../src/config/api/medicionesApi';
 import { LoadingModal } from '../../../src/components/Loading/LoadingModal';
 import { useFocusEffect } from 'expo-router';
@@ -12,6 +14,8 @@ import VersionDisplay from '../../../src/components/VersionAPP';
 import { AcuerdoCompromisoModal } from '../../../src/components/AcuerdoCompromisoModal';
 import { useAutorizacionStore } from '../../../src/store/Autorizacion/Autorizacion.store';
 import { useShallow } from 'zustand/react/shallow';
+
+const { width, height } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const [rut, setRut] = useState('');
@@ -76,11 +80,8 @@ export default function HomeScreen() {
         const nombrePaciente = datos.find(item => item.label === 'Nombre Completo')?.valor || 'No Encontrado';
         const rutCompleto = datos.find(item => item.label.toLowerCase().includes('rut'))?.valor || '';
 
-
-        //console.log('RUT completo encontrado:', rutCompleto);
-
         setPap(response.data.resultados);
-        setCurrentRut(rutCompleto); // Guardar el RUT con formato completo
+        setCurrentRut(rutCompleto);
 
         // Mostrar botón flotante si vigenciaPap es "No"
         setShowFloatingButton(vigenciaPap === 'NO');
@@ -182,8 +183,6 @@ export default function HomeScreen() {
   // Función para crear seguimiento PAP
   const crearSeguimientoPap = async () => {
     if (!currentRut || !user?.userName) {
-      //console.log('currentRut:', currentRut);
-
       setAlertTitle('No se puede crear seguimiento: Información incompleta');
       setAlertConfirmText('OK');
       setShowCancelButton(false);
@@ -203,8 +202,6 @@ export default function HomeScreen() {
         setIsLoading(false);
         return;
       }
-      
-      //console.log('Creando seguimiento para RUT:', currentRut);
       
       // Crear seguimiento PAP
       await MedicionesApi.post('/seguimientoPap', {
@@ -260,7 +257,7 @@ export default function HomeScreen() {
             name={expanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
             type="material"
             size={24}
-            color={Color.colorPlum}
+            color="#a33d69"
           />
         </TouchableOpacity>
         {expanded && (
@@ -268,7 +265,7 @@ export default function HomeScreen() {
             {camposOrdenados.map((campo, index) => (
               <View key={campo.id || index} style={styles.detailItem}>
                 <View style={styles.detailIconLabelContainer}>
-                  <Icon name={campo.icono} type="material" size={20} color={Color.colorPlum} />
+                  <Icon name={campo.icono || 'info'} type="material" size={20} color="#a33d69" />
                   <Text style={styles.detailLabel}>{campo.label}:</Text>
                 </View>
                 <Text style={styles.detailValue} numberOfLines={2} ellipsizeMode="tail">
@@ -285,31 +282,34 @@ export default function HomeScreen() {
   const renderResults = () => (
     <ScrollView style={styles.resultsContainer}>
       <View style={styles.resultHeaderContainer}>
-        <Text style={styles.resultTitle}>Ordenar:</Text>
-        <Button
-          icon={
-            <Icon
-              name="sort"
-              size={24}
-              color={ordenamiento === 'configurado' ? Color.colorWhite : Color.colorBlack}
-            />
-          }
-          onPress={() => setOrdenamiento('configurado')}
-          containerStyle={styles.ordenamientoButton}
-          buttonStyle={[styles.ordenamientoButtonStyle, ordenamiento === 'configurado' && styles.activeOrdenButton]}
-        />
-        <Button
-          icon={
-            <Icon
-              name="sort-by-alpha"
-              size={24}
-              color={ordenamiento === 'alfabetico' ? Color.colorWhite : Color.colorBlack}
-            />
-          }
-          onPress={() => setOrdenamiento('alfabetico')}
-          containerStyle={styles.ordenamientoButton}
-          buttonStyle={[styles.ordenamientoButtonStyle, ordenamiento === 'alfabetico' && styles.activeOrdenButton]}
-        />
+        <Text style={styles.resultTitle}>Ordenar por:</Text>
+        <View style={styles.sortButtonsContainer}>
+          <Button
+            icon={
+              <Icon
+                name="sort"
+                size={20}
+                color={ordenamiento === 'configurado' ? '#fff' : '#a33d69'}
+              />
+            }
+            onPress={() => setOrdenamiento('configurado')}
+            containerStyle={styles.sortButtonContainer}
+            buttonStyle={[styles.sortButton, ordenamiento === 'configurado' && styles.activeSortButton]}
+          />
+          
+          <Button
+            icon={
+              <Icon
+                name="sort-by-alpha"
+                size={20}
+                color={ordenamiento === 'alfabetico' ? '#fff' : '#a33d69'}
+              />
+            }
+            onPress={() => setOrdenamiento('alfabetico')}
+            containerStyle={styles.sortButtonContainer}
+            buttonStyle={[styles.sortButton, ordenamiento === 'alfabetico' && styles.activeSortButton]}
+          />
+        </View>
       </View>
       {pap && (
         <FlatList
@@ -324,80 +324,105 @@ export default function HomeScreen() {
   );
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      {isLoading && <LoadingModal visible={true} />}
-      {showQRScanner ? (
-        <QRScanner
-          onScan={handleQRScan}
-          onClose={() => setShowQRScanner(false)}
-          isActive={showQRScanner}
-        />
-      ) : (
-        <>
-          <ScrollView contentContainerStyle={styles.contentContainer}>
-            <View style={styles.searchContainer}>
-              <View style={styles.inputContainer}>
-                <Input
-                  placeholder="Ingrese RUT del paciente"
-                  onChangeText={handleRutChange}
-                  value={rut}
-                  containerStyle={styles.searchBar}
-                  inputContainerStyle={styles.searchBarInput}
-                  maxLength={8}
-                  keyboardType="numeric"
-                  leftIcon={
-                    <Icon name="search" size={30} color="#f08fb8" />
-                  }
-                />
-                <TouchableOpacity
-                  style={styles.qrButton}
-                  onPress={() => setShowQRScanner(true)}
-                >
-                  <Icon name="qr-code-scanner" size={40} color="#f08fb8" />
+    <KeyboardAvoidingView style={styles.container}>
+      <LinearGradient
+        colors={['#b52e69', 'white']}
+        style={styles.gradient}
+      >
+        {isLoading && <LoadingModal visible={true} />}
+        {showQRScanner ? (
+          <QRScanner
+            onScan={handleQRScan}
+            onClose={() => setShowQRScanner(false)}
+            isActive={showQRScanner}
+          />
+        ) : (
+          <>
+            <ScrollView contentContainerStyle={styles.contentContainer}>
+    
+              {/* Search Section */}
+              <View style={styles.searchSection}>
+                <View style={styles.inputGroup}>
+                  <View style={styles.inputWrapper}>
+                    <Ionicons name="search-outline" size={20} color="#a33d69" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.modernInput}
+                      placeholder="Ingrese RUT del paciente"
+                      placeholderTextColor="#abaaad"
+                      value={rut}
+                      onChangeText={handleRutChange}
+                      maxLength={8}
+                      keyboardType="numeric"
+                    />
+                    <TouchableOpacity
+                      style={styles.qrButton}
+                      onPress={() => setShowQRScanner(true)}
+                    >
+                      <Icon name="qr-code-scanner" type="material" size={24} color="#a33d69" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                <TouchableOpacity style={styles.searchButton} onPress={() => buscarPaciente()}>
+                  <LinearGradient
+                    colors={['#b52e69', '#b52e69']}
+                    style={styles.searchButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    <Text style={styles.searchButtonText}>Buscar Paciente</Text>
+                  </LinearGradient>
                 </TouchableOpacity>
               </View>
-              <Button
-                title="Buscar"
-                onPress={() => buscarPaciente()}
-                buttonStyle={styles.buttonStyle}
-                titleStyle={styles.buttonText}
-              />
+
+              {/* Results Section */}
+              {pap && renderResults()}
+              
+              <View style={styles.spacer} />
+            </ScrollView>
+
+            {/* Footer */}
+            <View style={styles.footerSection}>
+              <TouchableOpacity onPress={() => Linking.openURL('https://www.zdad-informaticos.com')}>
+                <Text style={styles.footerText}>
+                  Creado por www.zdad-informaticos.com
+                </Text>
+              </TouchableOpacity>
+              <Text style={styles.versionText}>
+                <VersionDisplay />
+              </Text>
             </View>
-            {pap && renderResults()}
-            <View style={styles.spacer} />
-          </ScrollView>
-          <View style={styles.footerContainer}>
-            <TouchableOpacity onPress={() => Linking.openURL('https://www.zdad-informaticos.com')}>
-              <Text style={styles.footerText}>Creado por www.zdad-informaticos.com</Text>
-            </TouchableOpacity>
-            <Text style={styles.versionText}>
-              <VersionDisplay />
-            </Text>
-          </View>
-          
-          {/* Botón flotante para crear seguimiento PAP */}
-          {showFloatingButton && (
-            <TouchableOpacity 
-              style={styles.floatingButton}
-              onPress={crearSeguimientoPap}
-            >
-              <Icon name="add-circle" type="material" size={24} color="white" />
-            </TouchableOpacity>
-          )}
-        </>
-      )}
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        onCancel={() => setAlertVisible(false)}
-        onConfirm={() => setAlertVisible(false)}
-        confirmText={alertConfirmText}
-        showCancelButton={showCancelButton}
-      />
-      <AcuerdoCompromisoModal visible={showAcuerdo} />
+            
+            {/* Botón flotante para crear seguimiento PAP */}
+            {showFloatingButton && (
+              <View style={styles.floatingButtonContainer}>
+                <TouchableOpacity 
+                  style={styles.floatingButton}
+                  onPress={crearSeguimientoPap}
+                  activeOpacity={0.8}
+                >
+                  <LinearGradient
+                    colors={['#b52e69', '#a33d69']}
+                    style={styles.floatingButtonGradient}
+                  >
+                    <Icon name="add-circle" type="material" size={28} color="white" />
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            )}
+          </>
+        )}
+        
+        <CustomAlert
+          visible={alertVisible}
+          title={alertTitle}
+          onCancel={() => setAlertVisible(false)}
+          onConfirm={() => setAlertVisible(false)}
+          confirmText={alertConfirmText}
+          showCancelButton={showCancelButton}
+        />
+        <AcuerdoCompromisoModal visible={showAcuerdo} />
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
@@ -405,7 +430,9 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Color.colorLavenderblush,
+  },
+  gradient: {
+    flex: 1,
   },
   contentContainer: {
     flexGrow: 1,
@@ -413,173 +440,241 @@ const styles = StyleSheet.create({
   spacer: {
     flex: 1,
   },
-  searchContainer: {
-    paddingHorizontal : 10,
-    
+
+  // Header Section
+  headerSection: {
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 60 : 80,
+    paddingBottom: 30,
   },
-  inputContainer: {
+  welcomeTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+
+  // Search Section
+  searchSection: {
+    paddingHorizontal: 20,
+    marginBottom: 20,
+    marginTop : 30
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent : 'center',
-    
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
+    paddingHorizontal: 15,
+    height: 55,
+    shadowColor: '#1f0a12',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  searchBar: {
-    flex : 1,
-    padding : 0,
-    width : '100%',
-  
-    justifyContent : 'center',
-    alignContent : 'center',
-    paddingTop : 25,
+  inputIcon: {
+    marginRight: 12,
+    color: '#a33d69',
   },
-  searchBarInput: {
-    backgroundColor: Color.colorLavenderblush_200,
-    borderRadius: 20,
-    borderColor: 'transparent',
-    paddingHorizontal : 10,
-    width : '100%',
-    
+  modernInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1f0a12',
+    paddingVertical: 0,
   },
   qrButton: {
-    alignSelf: 'center',
-    
-    backgroundColor: 'transparent',
-    paddingVertical: 8,
-    paddingHorizontal: 15,
-    borderRadius: 10,
+    padding: 8,
   },
-  buttonStyle: {
-    backgroundColor: "#f08fb8",
-    height: 45,
-    borderRadius: Border.br_xs,
-    marginHorizontal : 12
+
+  // Search Button
+  searchButton: {
+    borderRadius: 15,
+    overflow: 'hidden',
+    shadowColor: '#a33d69',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
   },
-  buttonText: {
-    fontFamily: FontFamily.publicSansBold,
-    fontSize: 14,
-    color: 'white',
+  searchButtonGradient: {
+    height: 55,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
+  searchButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+
+  // Results Section
   resultsContainer: {
     flex: 1,
-    backgroundColor: Color.colorLavenderblush,
-    borderTopLeftRadius: Border.br_xs,
-    borderTopRightRadius: Border.br_xs,
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    marginHorizontal: 10,
+    borderRadius: 20,
+    marginBottom: 10,
   },
   resultHeaderContainer: {
-    padding: Padding.p_base,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: Color.colorThistle,
+    borderBottomColor: '#ebc7d6',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
   },
   resultTitle: {
-    fontSize: FontSize.size_lg,
-    fontFamily: FontFamily.publicSansBold,
-    color: Color.colorBlack,
-    marginBottom: Padding.p_3xs,
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f0a12',
   },
-  ordenamientoButton: {
-    width: '30%',
+  sortButtonsContainer: {
+    flexDirection: 'row',
+    gap: 10,
   },
-  ordenamientoButtonStyle: {
-    backgroundColor: Color.colorLavenderblush,
-    borderRadius: Border.br_xs,
+  sortButtonContainer: {
+    width: 50,
   },
-  ordenamientoButtonText: {
-    color: Color.colorBlack,
-    fontFamily: FontFamily.publicSansRegular,
-    fontSize: FontSize.size_sm,
+  sortButton: {
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
+    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 10,
+    width: 50,
+    height: 50,
   },
-  activeOrdenButton: {
-    backgroundColor: Color.colorPlum,
+  activeSortButton: {
+    backgroundColor: '#b52e69',
+    borderColor: '#b52e69',
   },
-  activeOrdenButtonText: {
-    color: Color.colorWhite,
-    fontFamily: FontFamily.publicSansBold,
-  },
+
+  // List Items
   listContainer: {
-    padding: Padding.p_3xs,
+    padding: 15,
   },
   itemContainer: {
-    backgroundColor: Color.colorWhite,
-    borderRadius: Border.br_xs,
-    marginBottom: Padding.p_3xs,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
+    shadowColor: '#1f0a12',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 3,
     elevation: 2,
   },
   headerContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: Padding.p_base,
-    borderBottomColor: Color.colorThistle,
+    padding: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ebc7d6',
   },
   headerText: {
-    fontFamily: FontFamily.publicSansBold,
-    fontSize: FontSize.size_base,
-    color: Color.colorBlack,
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f0a12',
   },
   detailsContainer: {
-    padding: Padding.p_base,
+    padding: 15,
   },
   detailItem: {
-    marginBottom: Padding.p_3xs,
+    marginBottom: 12,
   },
   detailIconLabelContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Padding.p_5xs,
+    marginBottom: 5,
   },
   detailLabel: {
-    fontFamily: FontFamily.publicSansBold,
-    fontSize: FontSize.size_base,
-    color: Color.colorBlack,
-    marginLeft: Padding.p_3xs,
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#1f0a12',
+    marginLeft: 8,
   },
   detailValue: {
-    fontFamily: FontFamily.publicSansRegular,
-    fontSize: FontSize.size_base,
-    color: Color.colorMediumvioletred,
+    fontSize: 14,
+    color: '#b52e69',
     marginLeft: 28,
+    fontWeight: '500',
   },
-  footerContainer: {
-    padding: Padding.p_xs,
-    backgroundColor: Color.colorLavenderblush,
-    borderTopWidth: 1,
-    borderTopColor: Color.colorThistle,
+
+  // Footer Section
+  footerSection: {
     alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    marginBottom: 0,
   },
   footerText: {
-    color: Color.colorGrey,
-    fontFamily: FontFamily.publicSansMedium,
-    fontSize: FontSize.size_sm,
+    color: '#b52e69',
+    fontSize: 12,
     textAlign: 'center',
+    marginBottom: 5,
   },
   versionText: {
-    color: Color.colorGrey,
-    fontFamily: FontFamily.publicSansRegular,
-    fontSize: FontSize.size_sm,
-    marginTop: 10,
+    color: '#b52e69',
+    fontSize: 12,
   },
-  // Estilos para el botón flotante
+
+  // Floating Button
+  floatingButtonContainer: {
+    position: 'absolute',
+    right: 0,
+    bottom: 0,
+    left: 0,
+    top: 0,
+    pointerEvents: 'box-none',
+    zIndex: 1000,
+  },
   floatingButton: {
     position: 'absolute',
     right: 20,
-    bottom: 80,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Color.colorPlum,
-    alignItems: 'center',
+    bottom: 120,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    overflow: 'hidden',
+    elevation: 10,
+    shadowColor: '#b52e69',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    zIndex: 1001,
+  },
+  floatingButtonGradient: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.3,
-    shadowRadius: 3,
+    alignItems: 'center',
+    borderRadius: 30,
   },
 });

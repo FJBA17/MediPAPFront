@@ -1,11 +1,25 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, KeyboardAvoidingView, Platform, ScrollView } from 'react-native';
-import { Button, Input } from 'react-native-elements';
+import { 
+  View, 
+  Text, 
+  TextInput,
+  StyleSheet, 
+  TouchableOpacity, 
+  KeyboardAvoidingView, 
+  Platform, 
+  ScrollView,
+  ImageBackground,
+  Dimensions 
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { MedicionesApi } from '../../src/config/api/medicionesApi';
-import { Color, Padding, FontFamily, Border, FontSize } from "../../src/theme/GlobalStyles";
 import CustomAlert from '../../src/components/CustomAlert';
+import VersionDisplay from '../../src/components/VersionAPP';
 import axios from 'axios';
 import { router } from 'expo-router';
+
+const { width, height } = Dimensions.get('window');
 
 export default function RecuperarContrasena() {
   const [username, setUsername] = useState('');
@@ -18,6 +32,7 @@ export default function RecuperarContrasena() {
   const [alertConfirmText, setAlertConfirmText] = useState('OK');
   const [step, setStep] = useState(1);
   const [tempToken, setTempToken] = useState('');
+  const [secureTextEntry, setSecureTextEntry] = useState(true);
 
   const validateUsername = (username) => username.length >= 3;
   const validateCode = (code) => code.length === 6;
@@ -36,6 +51,7 @@ export default function RecuperarContrasena() {
       setAlertConfirmText('OK');
       setAlertVisible(true);
       setStep(2);
+      setError('');
     } catch (error) {
       if (axios.isAxiosError(error)) {
         setError(error.response?.data?.message || 'No se pudo enviar el código. Verifica el nombre de usuario e intenta de nuevo.');
@@ -58,6 +74,7 @@ export default function RecuperarContrasena() {
       const response = await MedicionesApi.post('/mail/validar-codigo', { userName: username, code });
       setTempToken(response.data.tempToken);
       setStep(3);
+      setError('');
     } catch (error) {
       if (axios.isAxiosError(error)) {
         setError(error.response?.data?.message || 'Código inválido. Intenta de nuevo.');
@@ -96,115 +113,236 @@ export default function RecuperarContrasena() {
     }
   };
 
+  const togglePasswordVisibility = () => {
+    setSecureTextEntry(!secureTextEntry);
+  };
+
+  const getStepTitle = () => {
+    switch (step) {
+      case 1:
+        return "Ingresa tu usuario";
+      case 2:
+        return "Código de verificación";
+      case 3:
+        return "Nueva contraseña";
+      default:
+        return "Recuperar Contraseña";
+    }
+  };
+
+  const getStepDescription = () => {
+    switch (step) {
+      case 1:
+        return "Te enviaremos un código de verificación";
+      case 2:
+        return "Revisa tu correo electrónico";
+      case 3:
+        return "Crea una nueva contraseña segura";
+      default:
+        return "";
+    }
+  };
+
   const renderStep = () => {
     switch (step) {
       case 1:
         return (
           <>
-            <Input
-              placeholder="Nombre de Usuario"
-              value={username}
-              onChangeText={(text) => {
-                setUsername(text);
-                setError('');
-              }}
-              autoCapitalize="none"
-              disabled={loading}
-              containerStyle={styles.inputContainer}
-              inputContainerStyle={styles.inputContainerStyle}
-              inputStyle={styles.inputStyle}
-              errorStyle={styles.errorText}
-              errorMessage={error}
-            />
-            <Button
-              title="Enviar Código de Verificación"
+            <View style={styles.inputGroup}>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="person-outline" size={20} color="#a33d69" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.modernInput}
+                  placeholder="Nombre de Usuario"
+                  placeholderTextColor="#abaaad"
+                  value={username}
+                  onChangeText={(text) => {
+                    setUsername(text);
+                    setError('');
+                  }}
+                  autoCapitalize="none"
+                  editable={!loading}
+                />
+              </View>
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            </View>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, loading && styles.disabledButton]} 
               onPress={handleSendVerificationCode}
-              loading={loading}
               disabled={loading || !username}
-              buttonStyle={styles.button}
-              titleStyle={styles.buttonText}
-              containerStyle={styles.buttonContainer}
-            />
+            >
+              <LinearGradient
+                colors={loading ? ['#ccc', '#ccc'] : ['#b52e69', '#b52e69']}
+                style={styles.actionButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                {loading ? (
+                  <Text style={styles.actionButtonText}>Enviando...</Text>
+                ) : (
+                  <Text style={styles.actionButtonText}>Enviar Código</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
           </>
         );
       case 2:
         return (
           <>
-            <Input
-              placeholder="Código de Verificación"
-              value={code}
-              onChangeText={(text) => setCode(text.toUpperCase())}
-              autoCapitalize="characters"
-              maxLength={6}
-              disabled={loading}
-              containerStyle={styles.inputContainer}
-              inputContainerStyle={styles.inputContainerStyle}
-              inputStyle={styles.inputStyle}
-              errorStyle={styles.errorText}
-              errorMessage={error}
-            />
-            <Button
-              title="Validar Código"
+            <View style={styles.inputGroup}>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="mail-outline" size={20} color="#a33d69" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.modernInput}
+                  placeholder="Código de Verificación"
+                  placeholderTextColor="#abaaad"
+                  value={code}
+                  onChangeText={(text) => {
+                    setCode(text.toUpperCase());
+                    setError('');
+                  }}
+                  autoCapitalize="characters"
+                  maxLength={6}
+                  editable={!loading}
+                />
+              </View>
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            </View>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, loading && styles.disabledButton]} 
               onPress={handleValidateCode}
-              loading={loading}
               disabled={loading || !code}
-              buttonStyle={styles.button}
-              titleStyle={styles.buttonText}
-              containerStyle={styles.buttonContainer}
-            />
+            >
+              <LinearGradient
+                colors={loading ? ['#ccc', '#ccc'] : ['#b52e69', '#b52e69']}
+                style={styles.actionButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                {loading ? (
+                  <Text style={styles.actionButtonText}>Validando...</Text>
+                ) : (
+                  <Text style={styles.actionButtonText}>Validar Código</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
           </>
         );
       case 3:
         return (
           <>
-            <Input
-              placeholder="Nueva Contraseña"
-              value={newPassword}
-              onChangeText={setNewPassword}
-              secureTextEntry
-              disabled={loading}
-              containerStyle={styles.inputContainer}
-              inputContainerStyle={styles.inputContainerStyle}
-              inputStyle={styles.inputStyle}
-              errorStyle={styles.errorText}
-              errorMessage={error}
-            />
-            <Button
-              title="Restablecer Contraseña"
+            <View style={styles.inputGroup}>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="lock-closed-outline" size={20} color="#a33d69" style={styles.inputIcon} />
+                <TextInput
+                  style={[styles.modernInput, { paddingRight: 50 }]}
+                  placeholder="Nueva Contraseña"
+                  placeholderTextColor="#abaaad"
+                  value={newPassword}
+                  onChangeText={(text) => {
+                    setNewPassword(text);
+                    setError('');
+                  }}
+                  secureTextEntry={secureTextEntry}
+                  editable={!loading}
+                />
+                <TouchableOpacity
+                  onPress={togglePasswordVisibility}
+                  style={styles.eyeButton}
+                >
+                  <Ionicons
+                    name={secureTextEntry ? "eye-off-outline" : "eye-outline"}
+                    size={20}
+                    color="#a33d69"
+                  />
+                </TouchableOpacity>
+              </View>
+              {error ? <Text style={styles.errorText}>{error}</Text> : null}
+            </View>
+            
+            <TouchableOpacity 
+              style={[styles.actionButton, loading && styles.disabledButton]} 
               onPress={handleResetPassword}
-              loading={loading}
               disabled={loading || !newPassword}
-              buttonStyle={styles.button}
-              titleStyle={styles.buttonText}
-              containerStyle={styles.buttonContainer}
-            />
+            >
+              <LinearGradient
+                colors={loading ? ['#ccc', '#ccc'] : ['#b52e69', '#b52e69']}
+                style={styles.actionButtonGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                {loading ? (
+                  <Text style={styles.actionButtonText}>Restableciendo...</Text>
+                ) : (
+                  <Text style={styles.actionButtonText}>Restablecer Contraseña</Text>
+                )}
+              </LinearGradient>
+            </TouchableOpacity>
           </>
         );
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
-      style={styles.container}
-    >
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <Text style={styles.title}>Recuperar Contraseña</Text>
-        {renderStep()}
-        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
-          <Text style={styles.backButtonText}>Volver al Inicio de Sesión</Text>
-        </TouchableOpacity>
-      </ScrollView>
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        onConfirm={() => {
-          setAlertVisible(false);
-          if (step === 3) router.replace('/login');
-        }}
-        confirmText={alertConfirmText}
-        showCancelButton={false}
-      />
+    <KeyboardAvoidingView style={styles.container}>
+      <LinearGradient
+        colors={['#b52e69', 'white']}
+        style={styles.gradient}
+      >
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <ImageBackground
+              style={styles.logo}
+              resizeMode="contain"
+              source={require("../../src/assets/Login/ImagenLogo.png")}
+            />
+            <Text style={styles.welcomeTitle}>Recuperar Contraseña</Text>
+            <Text style={styles.stepTitle}>{getStepTitle()}</Text>
+            <Text style={styles.stepDescription}>{getStepDescription()}</Text>
+          </View>
+
+          {/* Form Section */}
+          <View style={styles.formSection}>
+            {renderStep()}
+            
+            {/* Back Button */}
+            <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
+              <Text style={styles.backButtonText}>
+                <Ionicons name="arrow-back-outline" size={16} color="#b52e69" /> 
+                {" "}Volver al Inicio de Sesión
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.spacer} />
+        </ScrollView>
+
+        {/* Footer */}
+        <View style={styles.footerSection}>
+          <Text style={styles.footerText}>
+            Creado por www.zdad-informaticos.com
+          </Text>
+          <Text style={styles.versionText}>
+            <VersionDisplay />
+          </Text>
+        </View>
+
+        <CustomAlert
+          visible={alertVisible}
+          title={alertTitle}
+          onConfirm={() => {
+            setAlertVisible(false);
+            if (step === 3 && alertTitle.includes('restablecida con éxito')) {
+              router.replace('/login');
+            }
+          }}
+          confirmText={alertConfirmText}
+          showCancelButton={false}
+        />
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
@@ -212,60 +350,152 @@ export default function RecuperarContrasena() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Color.colorLavenderblush,
+  },
+  gradient: {
+    flex: 1,
   },
   scrollViewContent: {
     flexGrow: 1,
-    justifyContent: 'center',
-    padding: Padding.p_base,
   },
-  title: {
-    fontSize: FontSize.size_lg,
-    fontFamily: FontFamily.publicSansBold,
-    marginBottom: Padding.p_base,
-    textAlign: 'center',
-    color: Color.colorBlack,
+  spacer: {
+    flex: 1,
+  },
+  
+  // Header Section
+  headerSection: {
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 60 : 80,
+    paddingBottom: 40,
+  },
+  logo: {
+    width: 150,
+    height: 150,
+    marginBottom: 10,
+  },
+  welcomeTitle: {
+    fontSize: 28,
     fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
+    textAlign: 'center',
   },
-  inputContainer: {
-    marginBottom: Padding.p_base,
+  stepTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#fff',
+    marginBottom: 4,
+    textAlign: 'center',
   },
-  inputContainerStyle: {
+  stepDescription: {
+    fontSize: 14,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+
+  // Form Section
+  formSection: {
+    paddingHorizontal: 20,
+  },
+  
+  // Input Styles
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor : '#d87093',
-    backgroundColor: Color.colorWhite,
-    borderRadius: Border.br_xs,
-    paddingHorizontal: Padding.p_3xs,
+    borderColor: '#ebc7d6',
+    paddingHorizontal: 15,
+    height: 55,
+    shadowColor: '#1f0a12',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  inputStyle: {
-    fontFamily: FontFamily.publicSansRegular,
-    fontSize: FontSize.size_base,
-    color: Color.colorBlack,
+  inputIcon: {
+    marginRight: 12,
+    color: '#a33d69',
+  },
+  modernInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#1f0a12',
+    paddingVertical: 0,
+  },
+  eyeButton: {
+    padding: 5,
+    position: 'absolute',
+    right: 15,
   },
   errorText: {
-    color: Color.colorPalevioletred_100,
-    fontFamily: FontFamily.publicSansRegular,
-    fontSize: FontSize.size_sm,
+    color: '#d32f2f',
+    fontSize: 12,
+    marginTop: 5,
+    marginLeft: 15,
   },
-  buttonContainer: {
-    marginBottom: Padding.p_base,
+
+  // Action Button
+  actionButton: {
+    borderRadius: 15,
+    overflow: 'hidden',
+    shadowColor: '#a33d69',
+    shadowOffset: {
+      width: 0,
+      height: 10,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
+    marginBottom: 20,
   },
-  button: {
-    backgroundColor: Color.colorPink,
-    borderRadius: Border.br_xs,
-    padding: Padding.p_3xs,
+  disabledButton: {
+    opacity: 0.6,
   },
-  buttonText: {
-    fontFamily: FontFamily.publicSansBold,
-    fontSize: FontSize.size_base,
-    color: Color.colorBlack,
-  },
-  backButton: {
+  actionButtonGradient: {
+    height: 55,
+    justifyContent: 'center',
     alignItems: 'center',
   },
+  actionButtonText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+
+  // Back Button
+  backButton: {
+    alignItems: 'center',
+    marginTop: 10,
+  },
   backButtonText: {
-    color: Color.colorPlum,
-    fontFamily: FontFamily.publicSansMedium,
-    fontSize: FontSize.size_base,
+    color: '#b52e69',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+
+  // Footer Section
+  footerSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  footerText: {
+    color: '#b52e69',
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 5,
+  },
+  versionText: {
+    color: '#b52e69',
+    fontSize: 12,
   },
 });

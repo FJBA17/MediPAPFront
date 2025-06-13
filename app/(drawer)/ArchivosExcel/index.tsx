@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { View, Text, FlatList, StyleSheet, Alert } from 'react-native';
 import { MedicionesApi } from '../../../src/config/api/medicionesApi';
 import { useFocusEffect } from 'expo-router';
@@ -7,8 +7,8 @@ import { FontFamily, FontSize, Color, Border, Padding } from '../../../src/theme
 import { FloatingActionButton } from '../../../src/components/FAB';
 import { LoadingModal } from '../../../src/components/Loading/LoadingModal';
 import { ModalContainer } from '../../../src/components/ModalContainer';
-import { useCallback } from 'react';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import ArchivosCrear from './ArchivosCrear';
 
 interface Archivo {
@@ -23,21 +23,16 @@ export default function Archivos() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [loadError, setLoadError] = useState(false);
-  
-  // Estados para controlar la visualización de los modales
+
   const [crearModalVisible, setCrearModalVisible] = useState(false);
   const [confirmarModalVisible, setConfirmarModalVisible] = useState(false);
   const [archivoToDelete, setArchivoToDelete] = useState<string | null>(null);
   const [deleteTitle, setDeleteTitle] = useState('');
   const [isDeleting, setIsDeleting] = useState(false);
 
-  // Usamos useFocusEffect para obtener los datos cuando la pantalla obtiene el foco
   useFocusEffect(
     useCallback(() => {
       fetchArchivos();
-      return () => {
-        // Cleanup (opcional)
-      };
     }, [])
   );
 
@@ -56,10 +51,7 @@ export default function Archivos() {
     }
   };
 
-  // Funciones para abrir modales
-  const abrirModalCrearArchivo = () => {
-    setCrearModalVisible(true);
-  };
+  const abrirModalCrearArchivo = () => setCrearModalVisible(true);
 
   const abrirModalConfirmar = (id: string, nombreArchivo: string) => {
     setArchivoToDelete(id);
@@ -67,17 +59,12 @@ export default function Archivos() {
     setConfirmarModalVisible(true);
   };
 
-  // Funciones para cerrar modales
-  const cerrarModalCrear = () => {
-    setCrearModalVisible(false);
-  };
-
+  const cerrarModalCrear = () => setCrearModalVisible(false);
   const cerrarModalConfirmar = () => {
     setConfirmarModalVisible(false);
     setArchivoToDelete(null);
   };
 
-  // Funciones para manejar acciones de modales
   const handleArchivoCreado = () => {
     cerrarModalCrear();
     fetchArchivos();
@@ -85,11 +72,10 @@ export default function Archivos() {
 
   const handleConfirmDelete = async () => {
     if (!archivoToDelete || isDeleting) return;
-    
     try {
       setIsDeleting(true);
       await MedicionesApi.delete(`/pap/archivos/${archivoToDelete}`);
-      setArchivos(prevArchivos => prevArchivos.filter(archivo => archivo.id !== archivoToDelete));
+      setArchivos(prevArchivos => prevArchivos.filter(a => a.id !== archivoToDelete));
       cerrarModalConfirmar();
     } catch (err) {
       console.error('Error eliminando archivo:', err);
@@ -104,8 +90,7 @@ export default function Archivos() {
       <View style={styles.rowtext}>
         <View style={styles.columtext}>
           <Text style={styles.nombreArchivo}>{item.archivo}</Text>
-          <Text style={styles.infoArchivo}>{`Fecha de Registro: ${new Date(item.fechaRegistro).toLocaleDateString()}
-Cantidad de Registros: ${item.cantidadRegistros !== null ? item.cantidadRegistros : 'N/A'}`}</Text>
+          <Text style={styles.infoArchivo}>{`Fecha de Registro: ${new Date(item.fechaRegistro).toLocaleDateString()}\nCantidad de Registros: ${item.cantidadRegistros ?? 'N/A'}`}</Text>
         </View>
       </View>
       <View style={styles.rowbutton}>
@@ -118,32 +103,27 @@ Cantidad de Registros: ${item.cantidadRegistros !== null ? item.cantidadRegistro
     </View>
   );
 
-  if (loading) {
-    return <LoadingModal visible={true} />;
-  }
-
-  if (error) {
-    return <View style={styles.centered}><Text>{error}</Text></View>;
-  }
+  if (loading) return <LoadingModal visible={true} />;
+  if (error) return <View style={styles.centered}><Text>{error}</Text></View>;
 
   return (
-    <View style={styles.container}>
+    <LinearGradient colors={['#b52e69', 'white']} style={styles.gradient}>
       <FlatList
         data={archivos}
         renderItem={renderArchivo}
         keyExtractor={(item) => item.id}
+        contentContainerStyle={styles.container}
         ListEmptyComponent={
           loadError
             ? <Text style={styles.emptyText}>Error al cargar los archivos. Por favor, intente más tarde.</Text>
             : <Text style={styles.emptyText}>No hay archivos para mostrar</Text>
         }
       />
-      
+
       {!loadError && (
         <FloatingActionButton onPress={abrirModalCrearArchivo} />
       )}
 
-      {/* Modal para crear archivo */}
       <ModalContainer
         titulo="Nuevo Archivo"
         modalVisible={crearModalVisible}
@@ -152,7 +132,6 @@ Cantidad de Registros: ${item.cantidadRegistros !== null ? item.cantidadRegistro
         <ArchivosCrear onArchivoCreado={handleArchivoCreado} />
       </ModalContainer>
 
-      {/* Modal de confirmación para eliminar */}
       <ModalContainer
         titulo="Confirmar acción"
         modalVisible={confirmarModalVisible}
@@ -160,14 +139,12 @@ Cantidad de Registros: ${item.cantidadRegistros !== null ? item.cantidadRegistro
       >
         <View style={styles.confirmContent}>
           <Text style={styles.confirmTitle}>{deleteTitle}</Text>
-          
           <View style={styles.confirmButtonsContainer}>
             <Button
               title="Cancelar"
               buttonStyle={[styles.confirmButton, styles.cancelButton]}
               onPress={cerrarModalConfirmar}
             />
-            
             <Button
               title={isDeleting ? "Eliminando..." : "Confirmar"}
               buttonStyle={[styles.confirmButton, styles.deleteButton]}
@@ -177,14 +154,15 @@ Cantidad de Registros: ${item.cantidadRegistros !== null ? item.cantidadRegistro
           </View>
         </View>
       </ModalContainer>
-    </View>
+    </LinearGradient>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  gradient: {
     flex: 1,
-    backgroundColor: Color.colorLavenderblush,
+  },
+  container: {
     padding: Padding.p_base,
     paddingBottom: 100,
   },
@@ -240,38 +218,36 @@ const styles = StyleSheet.create({
   emptyText: {
     fontFamily: FontFamily.publicSansRegular,
     fontSize: FontSize.size_base,
-    color: Color.colorBlack,
+    color: Color.colorWhite,
     textAlign: 'center',
     marginTop: Padding.p_xl,
   },
-// Estilos para el modal de confirmación
-confirmContent: {
-  width: '100%',
-  alignItems: 'center', // Centra el contenido horizontalmente
-},
-confirmTitle: {
-  fontFamily: FontFamily.publicSansMedium,
-  fontSize: FontSize.size_lg,
-  color: Color.colorBlack,
-  marginBottom: Padding.p_base,
-  textAlign: 'center',
-},
-confirmButtonsContainer: {
-  flexDirection: 'row',
-  justifyContent: 'space-between',
-  width: '100%', // Ajusta el ancho del contenedor de botones
-  marginTop: 10, // Añade un margen superior
-  paddingHorizontal : 20,
-},
-confirmButton: {
-  borderRadius: 20,
-  width: 150, // Ajusta el ancho de los botones
-  height: 50, // Ajusta la altura de los botones
-  justifyContent: 'center', // Centra el texto verticalmente
-  alignItems: 'center', // Centra el texto horizontalmente
-},
-cancelButton: {
-  backgroundColor: Color.colorPlum,
-},
-
+  confirmContent: {
+    width: '100%',
+    alignItems: 'center',
+  },
+  confirmTitle: {
+    fontFamily: FontFamily.publicSansMedium,
+    fontSize: FontSize.size_lg,
+    color: Color.colorBlack,
+    marginBottom: Padding.p_base,
+    textAlign: 'center',
+  },
+  confirmButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginTop: 10,
+    paddingHorizontal: 20,
+  },
+  confirmButton: {
+    borderRadius: 20,
+    width: 150,
+    height: 50,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cancelButton: {
+    backgroundColor: Color.colorPlum,
+  },
 });

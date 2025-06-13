@@ -17,10 +17,13 @@ import { useRouter } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import { Ionicons } from "@expo/vector-icons";
 import { CheckBox } from "@rneui/themed";
+import { LinearGradient } from 'expo-linear-gradient';
 // Corregir la ruta del store de autorización
 import { useAutorizacionStore } from "../../src/store/Autorizacion/Autorizacion.store";
 import CustomAlert from "../../src/components/CustomAlert";
 import VersionDisplay from "../../src/components/VersionAPP";
+
+const { width, height } = Dimensions.get('window');
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -98,98 +101,127 @@ export default function LoginScreen() {
 
   return (
     <KeyboardAvoidingView
-      behavior={Platform.OS === "ios" ? "padding" : "height"}
+      
       style={styles.container}
     >
-      <ScrollView contentContainerStyle={styles.scrollViewContent}>
-        <View style={styles.backgroundContainer}>
-          <ImageBackground
-            style={styles.backgroundImage}
-            resizeMode="contain"
-            source={require("../../src/assets/Login/ImagenLogo.png")}
-          />
-        </View>
-
-        <View style={styles.formContainer}>
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Usuario</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="Usuario"
-              value={username.toLowerCase()}
-              onChangeText={(text) => {
-                const formattedUsername = text.trim().replace(/\s+/g, " ");
-                setUsername(formattedUsername);
-              }}
+      <LinearGradient
+        colors={['#b52e69', 'white']}
+        style={styles.gradient}
+      >
+        <ScrollView contentContainerStyle={styles.scrollViewContent}>
+          {/* Header Section */}
+          <View style={styles.headerSection}>
+            <ImageBackground
+              style={styles.logo}
+              resizeMode="contain"
+              source={require("../../src/assets/Login/ImagenLogo.png")}
             />
+            <Text style={styles.welcomeTitle}>MediPAP</Text>
           </View>
 
-          <View style={styles.inputContainer}>
-            <Text style={styles.inputLabel}>Contraseña</Text>
-            <View style={styles.passwordContainer}>
-              <TextInput
-                style={styles.passwordInput}
-                placeholder="Contraseña"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry={secureTextEntry}
-              />
-              <TouchableOpacity
-                onPress={togglePasswordVisibility}
-                style={styles.iconContainer}
-              >
-                <Ionicons
-                  name={secureTextEntry ? "eye-off" : "eye"}
-                  size={24}
-                  color="gray"
-                />
+          {/* Form Section */}
+          <View style={styles.formSection}>
+            
+              {/* Username Input */}
+              <View style={styles.inputGroup}>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="person-outline" size={20} color="#a33d69" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.modernInput}
+                    placeholder="Usuario"
+                    placeholderTextColor="#abaaad"
+                    value={username.toLowerCase()}
+                    onChangeText={(text) => {
+                      const formattedUsername = text.trim().replace(/\s+/g, " ");
+                      setUsername(formattedUsername);
+                    }}
+                  />
+                </View>
+              </View>
+
+              {/* Password Input */}
+              <View style={styles.inputGroup}>
+                <View style={styles.inputWrapper}>
+                  <Ionicons name="lock-closed-outline" size={20} color="#a33d69" style={styles.inputIcon} />
+                  <TextInput
+                    style={[styles.modernInput, { paddingRight: 50 }]}
+                    placeholder="Contraseña"
+                    placeholderTextColor="#abaaad"
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry={secureTextEntry}
+                  />
+                  <TouchableOpacity
+                    onPress={togglePasswordVisibility}
+                    style={styles.eyeButton}
+                  >
+                    <Ionicons
+                      name={secureTextEntry ? "eye-off-outline" : "eye-outline"}
+                      size={20}
+                      color="#a33d69"
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
+
+              {/* Remember Me */}
+              <View style={styles.rememberSection}>
+                <TouchableOpacity 
+                  style={styles.checkboxRow}
+                  onPress={toggleCheckBox}
+                >
+                  <View style={[styles.customCheckbox, isGuardarStorage && styles.customCheckboxChecked]}>
+                    {isGuardarStorage && (
+                      <Ionicons name="checkmark" size={14} color="#fff" />
+                    )}
+                  </View>
+                  <Text style={styles.rememberText}>Recordar credenciales</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={handleRecuperarContrasena}>
+                  <Text style={styles.forgotPasswordText}>¿Olvidaste tu contraseña?</Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Login Button */}
+              <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
+                <LinearGradient
+                  colors={['#b52e69', '#b52e69']}
+                  style={styles.loginButtonGradient}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 0 }}
+                >
+                  <Text style={styles.loginButtonText}>Iniciar Sesión</Text>
+                </LinearGradient>
               </TouchableOpacity>
-            </View>
+            
           </View>
 
-          <View style={styles.checkboxContainer}>
-            <CheckBox
-              containerStyle={styles.checkbox}
-              checked={isGuardarStorage}
-              checkedColor="#d87093" // Color.colorPalevioletred_100
-              onPress={toggleCheckBox}
-            />
-            <TouchableOpacity onPress={toggleCheckBox}>
-              <Text style={styles.checkboxText}>Recordar credenciales</Text>
-            </TouchableOpacity>
-          </View>
+          <View style={styles.spacer} />
+        </ScrollView>
 
-          <TouchableOpacity onPress={handleRecuperarContrasena}>
-            <Text style={styles.forgotPassword}>¿Olvidaste tu contraseña?</Text>
+        {/* Footer */}
+        <View style={styles.footerSection}>
+          <TouchableOpacity
+            onPress={() => Linking.openURL("https://www.zdad-informaticos.com")}
+          >
+            <Text style={styles.footerText}>
+              Creado por www.zdad-informaticos.com
+            </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity style={styles.loginButton} onPress={handleLogin}>
-            <Text style={styles.loginButtonText}>Acceder</Text>
-          </TouchableOpacity>
-        </View>
-        <View style={styles.spacer} />
-      </ScrollView>
-
-      <View style={styles.footerContainer}>
-        <TouchableOpacity
-          onPress={() => Linking.openURL("https://www.zdad-informaticos.com")}
-        >
-          <Text style={styles.footerText}>
-            Creado por www.zdad-informaticos.com
+          <Text style={styles.versionText}>
+            <VersionDisplay />
           </Text>
-        </TouchableOpacity>
-        <Text style={styles.versionText}>
-          <VersionDisplay />
-        </Text>
-      </View>
+        </View>
 
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        onConfirm={hideAlert}
-        confirmText="OK"
-        showCancelButton={false}
-      />
+        <CustomAlert
+          visible={alertVisible}
+          title={alertTitle}
+          onConfirm={hideAlert}
+          confirmText="OK"
+          showCancelButton={false}
+        />
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
@@ -197,7 +229,10 @@ export default function LoginScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#f8f0f5", // Equivalente a Color.colorLavenderblush
+    
+  },
+  gradient: {
+    flex: 1,
   },
   scrollViewContent: {
     flexGrow: 1,
@@ -205,130 +240,149 @@ const styles = StyleSheet.create({
   spacer: {
     flex: 1,
   },
-  backgroundContainer: {
-    marginTop: 40,
-    height: Dimensions.get("window").height * 0.3,
-    justifyContent: "center",
-    alignItems: "center",
+  
+  // Header Section
+  headerSection: {
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 60 : 80,
+    paddingBottom: 40,
   },
-  backgroundImage: {
-    width: 400,
-    height: 400,
-    
+  logo: {
+    width: 200,
+    height: 200,
+    marginBottom: 10,
   },
-  formContainer: {
-    padding: 16,
-    backgroundColor: "#f8f0f5",
-  },
-  inputContainer: {
-    marginBottom: 16,
-  },
-  inputLabel: {
-    color: "#000", // Color.colorBlack
-    fontWeight: "500", // FontFamily.publicSansMedium
-    fontSize: 16, // FontSize.size_base
+  welcomeTitle: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#fff',
     marginBottom: 8,
+    textAlign: 'center',
   },
-  input: {
-    height: 56,
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+
+  // Form Section
+  formSection: {
+    paddingHorizontal: 20,
+  },
+  
+  // Input Styles
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    borderRadius: 15,
     borderWidth: 1,
-    borderColor: "#d8bfd8", // Similar a Color.colorThistle
-    borderRadius: 8, // Border.br_xs
-    paddingHorizontal: 10,
-    backgroundColor: "#fff", // Color.colorWhite
-    color: "#000",
-    shadowColor: "#000",
+    borderColor: '#ebc7d6',
+    paddingHorizontal: 15,
+    height: 55,
+    shadowColor: '#1f0a12',
     shadowOffset: {
       width: 0,
       height: 2,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  passwordContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderWidth: 1,
-    borderColor: "#d8bfd8",
-    borderRadius: 8,
-    backgroundColor: "#fff",
-    shadowColor: "#000",
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+  inputIcon: {
+    marginRight: 12,
+    color: '#a33d69',
   },
-  passwordInput: {
+  modernInput: {
     flex: 1,
-    height: 56,
-    paddingHorizontal: 10,
-    color: "#000",
+    fontSize: 16,
+    color: '#1f0a12',
+    paddingVertical: 0,
   },
-  iconContainer: {
-    padding: 10,
+  eyeButton: {
+    padding: 5,
+    position: 'absolute',
+    right: 15,
   },
-  checkboxContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 16,
+
+  // Remember Section
+  rememberSection: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 30,
   },
-  checkbox: {
-    backgroundColor: "transparent",
-    borderWidth: 0,
-    padding: 0,
+  checkboxRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  customCheckbox: {
+    width: 20,
+    height: 20,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#fff',
     marginRight: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  checkboxText: {
-    color: "#db7093", // Similar a Color.colorPalevioletred_100
-    fontWeight: "400", // FontFamily.publicSansRegular
-    fontSize: 16, // FontSize.size_base
+  customCheckboxChecked: {
+    backgroundColor: '#b52e69',
+    borderColor: 'white',
   },
-  forgotPassword: {
-    color: "#db7093",
+  rememberText: {
     fontSize: 14,
-    marginBottom: 16,
+    color: '#b52e69',
+    fontWeight: '500',
   },
+  forgotPasswordText: {
+    fontSize: 14,
+    color: '#b52e69',
+    fontWeight: '600',
+  },
+
+  // Login Button
   loginButton: {
-    backgroundColor: "#ffb6c1", // Similar a Color.colorPink
-    height: 48,
-    borderRadius: 8,
-    justifyContent: "center",
-    alignItems: "center",
-    shadowColor: "#000",
+    borderRadius: 15,
+    overflow: 'hidden',
+    shadowColor: '#a33d69',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 10,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 3.84,
-    elevation: 5,
+    shadowOpacity: 0.3,
+    shadowRadius: 20,
+    elevation: 8,
+  },
+  loginButtonGradient: {
+    height: 55,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   loginButtonText: {
-    color: "#000", // Color.colorBlack
-    fontWeight: "bold", // FontFamily.publicSansBold
-    fontSize: 16, // FontSize.size_base
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
-  footerContainer: {
-    padding: 8, // Padding.p_xs
-    backgroundColor: "#f8f0f5",
-    borderTopWidth: 1,
-    borderTopColor: "#d8bfd8", // Color.colorThistle
-    alignItems: "center",
+
+  // Footer Section
+  footerSection: {
+    alignItems: 'center',
+    paddingVertical: 20,
+    paddingHorizontal: 20,
+    marginBottom : 20
   },
   footerText: {
-    color: "#808080", // Color.colorGrey
-    fontWeight: "500", // FontFamily.publicSansMedium
-    fontSize: 14, // FontSize.size_sm
-    textAlign: "center",
+    color: '#b52e69',
+    fontSize: 12,
+    textAlign: 'center',
+    marginBottom: 5,
   },
   versionText: {
-    color: "#808080",
-    fontWeight: "400", // FontFamily.publicSansRegular
-    fontSize: 14, // FontSize.size_sm
-    marginTop: 10,
+    color: '#b52e69',
+    fontSize: 12,
   },
 });

@@ -15,7 +15,10 @@ import {
   TouchableWithoutFeedback,
   PanResponder,
   KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { Icon } from 'react-native-elements';
 import { MedicionesApi } from '@/src/config/api/medicionesApi';
 import { useFocusEffect } from '@react-navigation/native';
@@ -78,7 +81,7 @@ export default function DetalleSeguimientoPap() {
           onPress={() => router.back()}
           style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 10 }}
         >
-          <Icon name="arrow-back" size={24} color="#f08fb8" />
+          <Ionicons name="arrow-back-outline" size={24} color="#ffffff" />
         </TouchableOpacity>
       ),
     });
@@ -144,6 +147,26 @@ export default function DetalleSeguimientoPap() {
       setAlertVisible(true);
       setNuevaNota('');
       setModalVisible(false);
+      
+      // Refrescar datos
+      const fetchData = async () => {
+        try {
+          const [notasRes, estadoRes] = await Promise.all([
+            MedicionesApi.get(`/seguimientoNota/historialNotas/${rut}`),
+            MedicionesApi.get(`/seguimientoEstado/ultimoEstado/${rut}`).catch(() => null)
+          ]);
+
+          const notasOrdenadas = (notasRes.data.data || []).sort(
+            (a, b) => new Date(b.fecha).getTime() - new Date(a.fecha).getTime()
+          );
+
+          setNotas(notasOrdenadas);
+          setEstadoActual(estadoRes?.data?.data?.estado || 'Sin estado');
+        } catch (error) {
+          console.error('Error al refrescar datos:', error);
+        }
+      };
+      fetchData();
     } catch (error) {
       setAlertTitle('No se pudo guardar la nota y el estado');
       setAlertConfirmText('OK');
@@ -190,7 +213,7 @@ export default function DetalleSeguimientoPap() {
       case 'En seguimiento':
         return { backgroundColor: '#FFF3E0', color: '#FF9800' };
       case 'Contactada':
-        return { backgroundColor: '#E91E63', color: '#FCE4EC' };
+        return { backgroundColor: '#FCE4EC', color: '#E91E63' };
       case 'Finalizada':
         return { backgroundColor: '#E8F5E8', color: '#4CAF50' };
       default:
@@ -200,110 +223,113 @@ export default function DetalleSeguimientoPap() {
 
   if (loading) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#f08fb8" />
-      </View>
+      <KeyboardAvoidingView style={styles.container}>
+        <LinearGradient colors={['#b52e69', 'white']} style={styles.gradient}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#ffffff" />
+            <Text style={styles.loadingText}>Cargando detalle...</Text>
+          </View>
+        </LinearGradient>
+      </KeyboardAvoidingView>
     );
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior="padding">
-      <View style={styles.mainContainer}>
-        {/* Header fijo con datos de la paciente */}
-        <View style={styles.headerSection}>
-          <Text style={styles.sectionTitle}>Datos de la Paciente</Text>
+    <KeyboardAvoidingView style={styles.container}>
+      <LinearGradient colors={['#b52e69', 'white']} style={styles.gradient}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Header Section */}
           
-          {seguimiento ? (
-            <View style={styles.patientCard}>
-              <View style={styles.patientRow}>
-                <Icon name="person" size={16} color="#666" style={styles.icon} />
-                <Text style={styles.patientLabel}>Nombre:</Text>
-                <Text style={styles.patientValue}>{seguimiento.nombreCompleto}</Text>
-              </View>
-              
-              <View style={styles.patientRow}>
-                <Icon name="badge" size={16} color="#666" style={styles.icon} />
-                <Text style={styles.patientLabel}>RUT:</Text>
-                <Text style={[styles.patientValue, {color: Color.colorMediumvioletred, fontWeight: 'bold'}]}>{seguimiento.rut}</Text>
-              </View>
-              
-              <View style={styles.patientRow}>
-                <Icon name="event" size={16} color="#666" style={styles.icon} />
-                <Text style={styles.patientLabel}>Edad:</Text>
-                <Text style={styles.patientValue}>{seguimiento.edad || 'No registrada'}</Text>
-              </View>
-              
-              <View style={styles.patientRow}>
-                <Icon name="cake" size={16} color="#666" style={styles.icon} />
-                <Text style={styles.patientLabel}>F.N:</Text>
-                <Text style={styles.patientValue}>{seguimiento.fechaNacimiento || 'No registrado'}</Text>
-              </View>
-              
-              <View style={styles.patientRow}>
-                <Icon name="phone" size={16} color="#666" style={styles.icon} />
-                <Text style={styles.patientLabel}>Fono:</Text>
-                <Text style={styles.patientValue}>{seguimiento.fono || 'No registrado'}</Text>
-              </View>
-              
-              <View style={styles.patientRow}>
-                <Icon name="home" size={16} color="#666" style={styles.icon} />
-                <Text style={styles.patientLabel}>Domicilio:</Text>
-                <Text style={styles.patientValue}>{seguimiento.domicilio || 'No registrado'}</Text>
-              </View>
-              
-              <View style={styles.patientRow}>
-                <Icon name="event-available" size={16} color="#666" style={styles.icon} />
-                <Text style={styles.patientLabel}>Fecha Detección:</Text>
-                <Text style={styles.patientValue}>{formatearFechaHora(seguimiento.fechaDeteccion)?.slice(0,8) || 'No registrada'}</Text>
-              </View>
-              
-              <View style={styles.patientRow}>
-                <Icon name="healing" size={16} color="#666" style={styles.icon} />
-                <Text style={styles.patientLabel}>Fecha PAP:</Text>
-                <Text style={styles.patientValue}>{seguimiento.fechaPap || 'No registrada'}</Text>
-              </View>
-              
-              <View style={styles.patientRow}>
-                <Icon name="verified-user" size={16} color="#666" style={styles.icon} />
-                <Text style={styles.patientLabel}>Vigencia PAP:</Text>
-                <Text style={styles.patientValue}> {seguimiento.vigenciaPap || 'NO'}</Text>
-              </View>
-              
-              <View style={styles.patientRow}>
-                <Icon name="history" size={16} color="#666" style={styles.icon} />
-                <Text style={styles.patientLabel}>Años PAP:</Text>
-                <Text style={styles.patientValue}>{seguimiento.anosPap ?? 'No registrado'}</Text>
-              </View>
-              
-              <View style={[styles.patientRow, { marginTop: 8 }]}>
-                <View style={[styles.estadoBadge, getEstadoStyle(estadoActual)]}>
-                  <View style={[styles.estadoDot, { backgroundColor: getEstadoStyle(estadoActual).color }]} />
-                  <Text style={[styles.estadoText, { color: getEstadoStyle(estadoActual).color }]}>
-                    {estadoActual}
-                  </Text>
+
+          {/* Patient Info Section */}
+          <View style={styles.contentSection}>
+            <Text style={styles.sectionTitle}>Datos del Paciente</Text>
+            
+            {seguimiento ? (
+              <View style={styles.patientCard}>
+                <View style={styles.patientRow}>
+                  <Ionicons name="person-outline" size={16} color="#a33d69" style={styles.icon} />
+                  <Text style={styles.patientLabel}>Nombre:</Text>
+                  <Text style={styles.patientValue}>{seguimiento.nombreCompleto}</Text>
+                </View>
+                
+                <View style={styles.patientRow}>
+                  <Ionicons name="card-outline" size={16} color="#a33d69" style={styles.icon} />
+                  <Text style={styles.patientLabel}>RUT:</Text>
+                  <Text style={[styles.patientValue, {color: '#b52e69', fontWeight: 'bold'}]}>{seguimiento.rut}</Text>
+                </View>
+                
+                <View style={styles.patientRow}>
+                  <Ionicons name="calendar-outline" size={16} color="#a33d69" style={styles.icon} />
+                  <Text style={styles.patientLabel}>Edad:</Text>
+                  <Text style={styles.patientValue}>{seguimiento.edad || 'No registrada'}</Text>
+                </View>
+                
+                <View style={styles.patientRow}>
+                  <Ionicons name="gift-outline" size={16} color="#a33d69" style={styles.icon} />
+                  <Text style={styles.patientLabel}>F.N:</Text>
+                  <Text style={styles.patientValue}>{seguimiento.fechaNacimiento || 'No registrado'}</Text>
+                </View>
+                
+                <View style={styles.patientRow}>
+                  <Ionicons name="call-outline" size={16} color="#a33d69" style={styles.icon} />
+                  <Text style={styles.patientLabel}>Fono:</Text>
+                  <Text style={styles.patientValue}>{seguimiento.fono || 'No registrado'}</Text>
+                </View>
+                
+                <View style={styles.patientRow}>
+                  <Ionicons name="home-outline" size={16} color="#a33d69" style={styles.icon} />
+                  <Text style={styles.patientLabel}>Domicilio:</Text>
+                  <Text style={styles.patientValue}>{seguimiento.domicilio || 'No registrado'}</Text>
+                </View>
+                
+                <View style={styles.patientRow}>
+                  <Ionicons name="today-outline" size={16} color="#a33d69" style={styles.icon} />
+                  <Text style={styles.patientLabel}>Fecha Detección:</Text>
+                  <Text style={styles.patientValue}>{formatearFechaHora(seguimiento.fechaDeteccion)?.slice(0,10) || 'No registrada'}</Text>
+                </View>
+                
+                <View style={styles.patientRow}>
+                  <Ionicons name="medical-outline" size={16} color="#a33d69" style={styles.icon} />
+                  <Text style={styles.patientLabel}>Fecha PAP:</Text>
+                  <Text style={styles.patientValue}>{seguimiento.fechaPap || 'No registrada'}</Text>
+                </View>
+                
+                <View style={styles.patientRow}>
+                  <Ionicons name="checkmark-circle-outline" size={16} color="#a33d69" style={styles.icon} />
+                  <Text style={styles.patientLabel}>Vigencia PAP:</Text>
+                  <Text style={styles.patientValue}> {seguimiento.vigenciaPap || 'NO'}</Text>
+                </View>
+                
+                <View style={styles.patientRow}>
+                  <Ionicons name="time-outline" size={16} color="#a33d69" style={styles.icon} />
+                  <Text style={styles.patientLabel}>Años PAP:</Text>
+                  <Text style={styles.patientValue}>{seguimiento.anosPap ?? 'No registrado'}</Text>
+                </View>
+                
+                <View style={[styles.patientRow, { marginTop: 15, justifyContent: 'center' }]}>
+                  <View style={[styles.estadoBadge, getEstadoStyle(estadoActual)]}>
+                    <View style={[styles.estadoDot, { backgroundColor: getEstadoStyle(estadoActual).color }]} />
+                    <Text style={[styles.estadoText, { color: getEstadoStyle(estadoActual).color }]}>
+                      {estadoActual}
+                    </Text>
+                  </View>
                 </View>
               </View>
-            </View>
-          ) : (
-            <View style={styles.patientCard}>
-              <Text style={styles.noDataText}>No se encontró información del seguimiento.</Text>
-            </View>
-          )}
-          
-          {/* Título de Notas */}
-          <Text style={styles.sectionTitle}>Notas</Text>
-        </View>
+            ) : (
+              <View style={styles.patientCard}>
+                <Text style={styles.noDataText}>No se encontró información del seguimiento.</Text>
+              </View>
+            )}
 
-        {/* Sección de Notas con scroll independiente */}
-        <View style={styles.notesContainer}>
-          <ScrollView 
-            style={styles.notesScrollView}
-            showsVerticalScrollIndicator={false}
-          >
+            {/* Notes Section */}
+            <Text style={styles.sectionTitle}>Historial de Notas</Text>
+            
             {notas.length === 0 ? (
               <View style={styles.emptyNotesCard}>
-                <Icon name="note" size={48} color="#ccc" />
+                <Ionicons name="document-text-outline" size={48} color="#ccc" />
                 <Text style={styles.emptyNotesText}>No hay notas registradas</Text>
+                <Text style={styles.emptyNotesSubtext}>Agrega la primera nota usando el botón inferior</Text>
               </View>
             ) : (
               notas.map((nota, index) => (
@@ -316,80 +342,108 @@ export default function DetalleSeguimientoPap() {
                 </View>
               ))
             )}
-          </ScrollView>
-        </View>
-      </View>
-      
-      {/* Botón flotante con gradiente */}
-      <TouchableOpacity style={styles.floatingButton} onPress={openModal}>
-        <Icon name="add" size={28} color="white" />
-      </TouchableOpacity>
-
-      {/* Modal mejorado */}
-      <Modal transparent visible={modalVisible} animationType="none">
-        <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}> 
-          <TouchableWithoutFeedback onPress={closeModal}>
-            <View style={StyleSheet.absoluteFill} />
-          </TouchableWithoutFeedback>
-        </Animated.View>
-
-        <Animated.View
-          style={[styles.modalView, { transform: [{ translateY: modalY }] }]}
-          {...panResponder.panHandlers}
-        >
-          <View style={styles.modalHandle} />
-          <Text style={styles.modalTitle}>Nueva Nota</Text>
-          
-          <TextInput
-            style={styles.input}
-            placeholder="Escribe la nota..."
-            placeholderTextColor="#999"
-            multiline
-            value={nuevaNota}
-            onChangeText={setNuevaNota}
-          />
-          
-          <TouchableOpacity onPress={() => setShowEstadoOptions(!showEstadoOptions)} style={styles.selector}>
-            <Text style={styles.selectorText}>{nuevoEstado}</Text>
-            <Icon name={showEstadoOptions ? "keyboard-arrow-up" : "keyboard-arrow-down"} size={24} color="#666" />
-          </TouchableOpacity>
-          
-          {showEstadoOptions && (
-            <View style={styles.optionList}>
-              {['No contactada', 'Contactada', 'En seguimiento', 'Finalizada'].map((estado) => (
-                <TouchableOpacity
-                  key={estado}
-                  style={styles.optionItem}
-                  onPress={() => {
-                    setNuevoEstado(estado);
-                    setShowEstadoOptions(false);
-                  }}
-                >
-                  <Text style={styles.optionText}>{estado}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          )}
-          
-          <View style={styles.modalButtons}>
-            <Pressable style={[styles.modalButton, styles.cancelButton]} onPress={closeModal}>
-              <Text style={styles.cancelButtonText}>Cancelar</Text>
-            </Pressable>
-            <Pressable style={[styles.modalButton, styles.saveButton]} onPress={crearNotaYEstado}>
-              <Text style={styles.saveButtonText}>Guardar</Text>
-            </Pressable>
           </View>
-        </Animated.View>
-      </Modal>
-      
-      <CustomAlert
-        visible={alertVisible}
-        title={alertTitle}
-        onCancel={() => setAlertVisible(false)}
-        onConfirm={() => setAlertVisible(false)}
-        confirmText={alertConfirmText}
-        showCancelButton={showCancelButton}
-      />
+
+          <View style={styles.spacer} />
+        </ScrollView>
+        
+        {/* Floating Action Button */}
+        <TouchableOpacity style={styles.floatingButton} onPress={openModal}>
+          <LinearGradient
+            colors={['#b52e69', '#a33d69']}
+            style={styles.floatingButtonGradient}
+          >
+            <Ionicons name="add-outline" size={28} color="white" />
+          </LinearGradient>
+        </TouchableOpacity>
+
+        {/* Modal para nueva nota */}
+        <Modal transparent visible={modalVisible} animationType="none">
+          <Animated.View style={[styles.overlay, { opacity: overlayOpacity }]}> 
+            <TouchableWithoutFeedback onPress={closeModal}>
+              <View style={StyleSheet.absoluteFill} />
+            </TouchableWithoutFeedback>
+          </Animated.View>
+
+          <Animated.View
+            style={[styles.modalView, { transform: [{ translateY: modalY }] }]}
+            {...panResponder.panHandlers}
+          >
+            <View style={styles.modalHandle} />
+            <Text style={styles.modalTitle}>Nueva Nota</Text>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Nota</Text>
+              <View style={styles.textAreaWrapper}>
+                <TextInput
+                  style={styles.textAreaInput}
+                  placeholder="Escribe la nota del seguimiento..."
+                  placeholderTextColor="#abaaad"
+                  multiline
+                  value={nuevaNota}
+                  onChangeText={setNuevaNota}
+                  textAlignVertical="top"
+                />
+              </View>
+            </View>
+            
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Estado</Text>
+              <TouchableOpacity 
+                onPress={() => setShowEstadoOptions(!showEstadoOptions)} 
+                style={styles.selector}
+              >
+                <Text style={styles.selectorText}>{nuevoEstado}</Text>
+                <Ionicons 
+                  name={showEstadoOptions ? "chevron-up-outline" : "chevron-down-outline"} 
+                  size={20} 
+                  color="#a33d69" 
+                />
+              </TouchableOpacity>
+              
+              {showEstadoOptions && (
+                <View style={styles.optionList}>
+                  {['No contactada', 'Contactada', 'En seguimiento', 'Finalizada'].map((estado) => (
+                    <TouchableOpacity
+                      key={estado}
+                      style={styles.optionItem}
+                      onPress={() => {
+                        setNuevoEstado(estado);
+                        setShowEstadoOptions(false);
+                      }}
+                    >
+                      <Text style={styles.optionText}>{estado}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              )}
+            </View>
+            
+            <View style={styles.modalButtons}>
+              <TouchableOpacity style={styles.cancelButton} onPress={closeModal}>
+                <Text style={styles.cancelButtonText}>Cancelar</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.saveButton} onPress={crearNotaYEstado}>
+                <LinearGradient
+                  colors={['#b52e69', '#b52e69']}
+                  style={styles.saveButtonGradient}
+                >
+                  <Text style={styles.saveButtonText}>Guardar</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </Modal>
+        
+        <CustomAlert
+          visible={alertVisible}
+          title={alertTitle}
+          onCancel={() => setAlertVisible(false)}
+          onConfirm={() => setAlertVisible(false)}
+          confirmText={alertConfirmText}
+          showCancelButton={showCancelButton}
+        />
+      </LinearGradient>
     </KeyboardAvoidingView>
   );
 }
@@ -397,45 +451,65 @@ export default function DetalleSeguimientoPap() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Color.colorLavenderblush,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: Color.colorLavenderblush,
-  },
-  mainContainer: {
+  gradient: {
     flex: 1,
   },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  spacer: {
+    flex: 1,
+  },
+
+  // Header Section
   headerSection: {
-    paddingHorizontal: 16,
-    paddingTop: 8,
-    paddingBottom: 16,
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 40 : 60,
+    paddingBottom: 30,
   },
-  notesContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  notesScrollView: {
-    flex: 1,
-  },
-  sectionTitle: {
+  welcomeTitle: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#fff',
     marginBottom: 5,
-    color: '#1F2937',
+    textAlign: 'center',
   },
-  patientCard: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 20,
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+
+  // Content Section
+  contentSection: {
+    paddingTop : 20,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
     marginBottom: 15,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
-    elevation: 4,
+    color: '#1f0a12',
+  },
+
+  // Patient Card
+  patientCard: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 20,
+    marginBottom: 25,
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
+    shadowColor: '#1f0a12',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
   },
   patientRow: {
     flexDirection: 'row',
@@ -444,25 +518,25 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
   },
   patientLabel: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: 'bold',
-    color: '#374151',
+    color: '#1f0a12',
     minWidth: 100,
     marginRight: 8,
   },
   patientValue: {
-    fontSize: 16,
-    color: 'black',
+    fontSize: 14,
+    color: '#666',
     flex: 1,
   },
   icon: {
-    marginRight: 5,
+    marginRight: 8,
   },
   estadoBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 8,
     borderRadius: 20,
   },
   estadoDot: {
@@ -477,73 +551,108 @@ const styles = StyleSheet.create({
   },
   noDataText: {
     fontSize: 16,
-    color: '#6B7280',
+    color: '#666',
     textAlign: 'center',
     fontStyle: 'italic',
   },
+
+  // Notes
   emptyNotesCard: {
-    backgroundColor: 'white',
-    borderRadius: 20,
-    padding: 40,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 30,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 2,
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
+    marginBottom: 100,
   },
   emptyNotesText: {
     fontSize: 16,
-    color: '#9CA3AF',
-    marginTop: 12,
-    fontStyle: 'italic',
+    color: '#666',
+    marginTop: 10,
+    fontWeight: '600',
+  },
+  emptyNotesSubtext: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 5,
+    textAlign: 'center',
   },
   noteCard: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 15,
     marginBottom: 12,
-    shadowColor: '#000',
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
+    shadowColor: '#1f0a12',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
     shadowOpacity: 0.05,
-    shadowOffset: { width: 0, height: 2 },
-    shadowRadius: 8,
-    elevation: 2,
+    shadowRadius: 2,
+    elevation: 1,
   },
   noteHeader: {
     marginBottom: 8,
   },
   noteDate: {
-    fontSize: 14,
+    fontSize: 12,
     fontWeight: 'bold',
-    color: '#1F2937',
+    color: '#a33d69',
   },
   noteText: {
-    fontSize: 16,
-    color: '#374151',
-    lineHeight: 22,
+    fontSize: 14,
+    color: '#1f0a12',
+    lineHeight: 20,
     marginBottom: 8,
   },
   noteAuthor: {
-    fontSize: 12,
-    color: '#9CA3AF',
+    fontSize: 11,
+    color: '#999',
     fontStyle: 'italic',
   },
+
+  // Loading State
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginTop: 10,
+  },
+
+  // Floating Button
   floatingButton: {
     position: 'absolute',
     right: 20,
     bottom: 30,
-    backgroundColor: '#EC4899',
-    borderRadius: 28,
-    width: 56,
-    height: 56,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#EC4899',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    overflow: 'hidden',
+    elevation: 10,
+    shadowColor: '#b52e69',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.4,
     shadowRadius: 8,
-    elevation: 8,
   },
+  floatingButtonGradient: {
+    width: '100%',
+    height: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 30,
+  },
+
+  // Modal Styles
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.5)',
@@ -554,15 +663,15 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'white',
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 20,
     paddingTop: 12,
   },
   modalHandle: {
     width: 40,
     height: 4,
-    backgroundColor: '#D1D5DB',
+    backgroundColor: '#ebc7d6',
     borderRadius: 2,
     alignSelf: 'center',
     marginBottom: 20,
@@ -571,77 +680,96 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontWeight: 'bold',
     marginBottom: 20,
-    color: '#1F2937',
+    color: '#1f0a12',
     textAlign: 'center',
   },
-  input: {
+
+  // Form Inputs
+  inputGroup: {
+    marginBottom: 15,
+  },
+  inputLabel: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#1f0a12',
+    marginBottom: 8,
+  },
+  textAreaWrapper: {
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#ebc7d6',
     borderRadius: 12,
-    padding: 16,
-    height: 120,
-    marginBottom: 16,
+    backgroundColor: '#f9f9f9',
+  },
+  textAreaInput: {
+    padding: 15,
+    height: 100,
     textAlignVertical: 'top',
     fontSize: 16,
-    color: '#1F2937',
-    backgroundColor: '#F9FAFB',
+    color: '#1f0a12',
   },
   selector: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#ebc7d6',
     borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    backgroundColor: '#F9FAFB',
+    padding: 15,
+    backgroundColor: '#f9f9f9',
   },
   selectorText: {
     fontSize: 16,
-    color: '#1F2937',
+    color: '#1f0a12',
   },
   optionList: {
-    backgroundColor: '#F9FAFB',
+    backgroundColor: '#fff',
     borderRadius: 12,
-    marginBottom: 16,
+    marginTop: 5,
     borderWidth: 1,
-    borderColor: '#E5E7EB',
+    borderColor: '#ebc7d6',
   },
   optionItem: {
     paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingHorizontal: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#f0f0f0',
   },
   optionText: {
     fontSize: 16,
-    color: '#374151',
+    color: '#1f0a12',
   },
+
+  // Modal Buttons
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
-  },
-  modalButton: {
-    flex: 1,
-    paddingVertical: 14,
-    paddingHorizontal: 24,
-    borderRadius: 12,
-    alignItems: 'center',
+    marginTop: 10,
   },
   cancelButton: {
-    backgroundColor: '#F3F4F6',
+    flex: 1,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    backgroundColor: '#f5f5f5',
     borderWidth: 1,
-    borderColor: '#D1D5DB',
+    borderColor: '#ebc7d6',
   },
   cancelButtonText: {
-    color: '#6B7280',
+    color: '#666',
     fontSize: 16,
     fontWeight: 'bold',
   },
   saveButton: {
-    backgroundColor: '#EC4899',
+    flex: 1,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  saveButtonGradient: {
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    alignItems: 'center',
   },
   saveButtonText: {
     color: 'white',

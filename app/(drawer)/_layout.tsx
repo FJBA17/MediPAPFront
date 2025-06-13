@@ -22,7 +22,7 @@ export default function DrawerLayout() {
     } else {
       setIsAdmin(false);
       const currentPath = segments.join('/');
-      const restrictedPaths = ['Usuarios', 'ArchivosExcel', 'Reportes', 'Configuracion'];
+      const restrictedPaths = ['Usuarios', 'ArchivosExcel', 'Reportes', 'Configuracion', 'Dashboard', 'Unidades'];
       if (restrictedPaths.some(path => currentPath.includes(path))) {
         router.replace('/(drawer)/home');
       }
@@ -31,19 +31,22 @@ export default function DrawerLayout() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="dark" backgroundColor="transparent" translucent />
+      <StatusBar style="light" backgroundColor="#b52e69" translucent />
       {user ? (
         <Drawer
           screenOptions={{
             headerStyle: { 
-              backgroundColor: "#faf0f5", 
+              backgroundColor: "#b52e69", 
               elevation: 0,
-              // No usar paddingTop aquí
+              shadowOpacity: 0,
             },
             // Usar headerStatusBarHeight para manejar el espacio para la barra de estado
             headerStatusBarHeight: Platform.OS === 'android' ? insets.top : undefined,
-            headerTintColor: "#1f0a12",
-            headerTitleStyle: { fontWeight: "bold" },
+            headerTintColor: "#ffffff",
+            headerTitleStyle: { 
+              fontWeight: "bold",
+              color: "#ffffff"
+            },
             drawerStyle: { 
               backgroundColor: "#faf0f5", 
               width: 280,
@@ -85,6 +88,40 @@ export default function DrawerLayout() {
               headerShown: false,
               drawerIcon: ({ color }) => <Ionicons name="medkit" size={22} color={color} />
             }}
+          />
+
+          <Drawer.Screen
+            name="Dashboard/index"
+            options={{
+              title: "Dashboard",
+              drawerIcon: ({ color }) => <Ionicons name="analytics" size={22} color={color} />,
+              drawerItemStyle: !isAdmin ? { display: 'none' } : undefined,
+              unmountOnBlur: !isAdmin
+            }}
+            listeners={({ navigation }) => ({
+              focus: () => {
+                if (!isAdmin) {
+                  navigation.navigate('home');
+                }
+              }
+            })}
+          />
+
+          <Drawer.Screen
+            name="Unidades/index"
+            options={{
+              title: "Gestión de Unidades",
+              drawerIcon: ({ color }) => <Ionicons name="business" size={22} color={color} />,
+              drawerItemStyle: !isAdmin ? { display: 'none' } : undefined,
+              unmountOnBlur: !isAdmin
+            }}
+            listeners={({ navigation }) => ({
+              focus: () => {
+                if (!isAdmin) {
+                  navigation.navigate('home');
+                }
+              }
+            })}
           />
 
           <Drawer.Screen
@@ -275,7 +312,7 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   avatarContainer: {
-    backgroundColor: "#9E76AB",
+    backgroundColor: "#b52e69",
     borderRadius: 50,
     width: 60,
     height: 60,

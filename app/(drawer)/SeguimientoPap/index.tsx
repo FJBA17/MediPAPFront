@@ -15,14 +15,15 @@ import {
   TextInput,
   SafeAreaView,
   KeyboardAvoidingView,
+  Platform,
 } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { DrawerActions, useFocusEffect, useNavigation } from '@react-navigation/native';
 import { MedicionesApi } from '../../../src/config/api/medicionesApi';
 import { orderOptions, OrderOptionValue } from '../../../src/constans/orderOptions';
 import { Color, Padding } from '@/src/theme/GlobalStyles';
 import { Icons } from "@/src/components/Icons";
-import { Input } from "react-native-elements";
-import { color } from "@rneui/base";
 
 export default function PantallaSeguimientoPap() {
   const [seguimientos, setSeguimientos] = useState([]);
@@ -36,8 +37,7 @@ export default function PantallaSeguimientoPap() {
   // Estados para el modal de ordenamiento
   const [isOrderModalVisible, setIsOrderModalVisible] = useState(false);
   const orderModalY = useRef(new Animated.Value(1000)).current;
-  const orderOverlayOpacity = useRef(new Animated.Value(0)).current
-
+  const orderOverlayOpacity = useRef(new Animated.Value(0)).current;
 
   // Función para obtener el color del estado
   const getEstadoColor = (estado: string) => {
@@ -69,7 +69,6 @@ export default function PantallaSeguimientoPap() {
         return '#F5F5F5'; // Gris claro por defecto
     }
   };
-  
 
   useLayoutEffect(() => {
     navigation.setOptions({
@@ -78,7 +77,7 @@ export default function PantallaSeguimientoPap() {
           onPress={() => navigation.dispatch(DrawerActions.openDrawer())}
           style={{ paddingHorizontal: 10}}
         >
-          <Icons name="menu" size={24} color="#f08fb8" />
+          <Ionicons name="menu-outline" size={24} color="#ffffff" />
         </TouchableOpacity>
       ),
     });
@@ -121,7 +120,7 @@ export default function PantallaSeguimientoPap() {
     }, [])
   );
 
-  // Funciones modal Orenamiento
+  // Funciones modal Ordenamiento
   const openOrderModal = () => {
     setIsOrderModalVisible(true);
     orderModalY.setValue(1000);
@@ -170,21 +169,42 @@ export default function PantallaSeguimientoPap() {
     closeOrderModal();
   };
 
-  if (loading) return <ActivityIndicator style={{ flex: 1 }} size="large" />;
+  if (loading) {
+    return (
+      <KeyboardAvoidingView style={styles.container}>
+        <LinearGradient colors={['#b52e69', 'white']} style={styles.gradient}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#ffffff" />
+            <Text style={styles.loadingText}>Cargando seguimientos...</Text>
+          </View>
+        </LinearGradient>
+      </KeyboardAvoidingView>
+    );
+  }
 
   if (loadError) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-        <Text style={{ color: 'red', fontSize: 16 }}>Error cargando datos</Text>
-      </View>
+      <KeyboardAvoidingView style={styles.container}>
+        <LinearGradient colors={['#b52e69', 'white']} style={styles.gradient}>
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={48} color="#ffffff" />
+            <Text style={styles.errorText}>Error cargando datos</Text>
+          </View>
+        </LinearGradient>
+      </KeyboardAvoidingView>
     );
   }
 
   if (seguimientos.length === 0) {
     return (
-      <View style={{ padding: 20 }}>
-        <Text>📭 No hay seguimientos disponibles.</Text>
-      </View>
+      <KeyboardAvoidingView style={styles.container}>
+        <LinearGradient colors={['#b52e69', 'white']} style={styles.gradient}>
+          <View style={styles.emptyContainer}>
+            <Ionicons name="folder-open-outline" size={48} color="#ffffff" />
+            <Text style={styles.emptyText}>No hay seguimientos disponibles</Text>
+          </View>
+        </LinearGradient>
+      </KeyboardAvoidingView>
     );
   }
 
@@ -199,6 +219,7 @@ export default function PantallaSeguimientoPap() {
         return a.nombreCompleto.localeCompare(b.nombreCompleto);
     }
   });
+  
   // Filtrar por búsqueda
   const seguimientosFiltrados = seguimientosOrdenados.filter(item =>
     item.nombreCompleto.toLowerCase().includes(busqueda.toLowerCase()) ||
@@ -206,62 +227,70 @@ export default function PantallaSeguimientoPap() {
   );
 
   return (
-     <KeyboardAvoidingView style={styles.contentContainer}>
-        {/* Contenedor de búsqueda y filtro en la misma fila */}
-        <View style={styles.searchFilterContainer}>
-          {/* Buscador */}
-          <View style={styles.searchContainer}>
-            <View style={styles.searchInputContainer}>
-              <Icons name="search" size={20} color={Color.colorPalevioletred_100} style={styles.searchIcon} />
-              <TextInput
-                placeholder="Buscar por nombre o RUT..."
-                style={styles.searchInput}
-                value={busqueda}
-                onChangeText={setBusqueda}
-                placeholderTextColor="#999"
-              />
+    <KeyboardAvoidingView style={styles.container}>
+      <LinearGradient colors={['#b52e69', 'white']} style={styles.gradient}>
+        <ScrollView contentContainerStyle={styles.scrollContent}>
+          {/* Search and Filter Section */}
+          <View style={styles.searchSection}>
+            <View style={styles.inputGroup}>
+              <View style={styles.inputWrapper}>
+                <Ionicons name="search-outline" size={20} color="#a33d69" style={styles.inputIcon} />
+                <TextInput
+                  style={styles.modernInput}
+                  placeholder="Buscar por nombre o RUT..."
+                  placeholderTextColor="#abaaad"
+                  value={busqueda}
+                  onChangeText={setBusqueda}
+                />
+                <TouchableOpacity style={styles.filterButton} onPress={openOrderModal}>
+                  <Ionicons name="options-outline" size={20} color="#a33d69" />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-          
-          {/* Botón de filtro */}
-          <TouchableOpacity
-            style={styles.filterButton}
-            onPress={openOrderModal}
-          >
-            <Icons name="filter" size={20} color="#fffaf0" />
-          </TouchableOpacity>
-        </View>
 
-        {/* Lista de seguimientos */}
-        <ScrollView style={styles.scrollViewContainer} showsVerticalScrollIndicator={false}>
-          {seguimientosFiltrados.map((item) => (
-            <Pressable
-              key={item.rut.toString()}
-              onPress={() => navigation.navigate('DetalleSeguimientoPap', { rut: item.rut })}
-              style={styles.tarjeta}
-            >
-              <View style={styles.tarjetaHeader}>
-                <Text style={styles.nombrePaciente}>
-                  {item.nombreCompleto}
-                </Text>
+          {/* Results Section */}
+          <View style={styles.resultsContainer}>
+            <Text style={styles.resultsTitle}>
+              {seguimientosFiltrados.length} paciente{seguimientosFiltrados.length !== 1 ? 's' : ''} encontrado{seguimientosFiltrados.length !== 1 ? 's' : ''}
+            </Text>
+            
+            {seguimientosFiltrados.map((item) => (
+              <TouchableOpacity
+                key={item.rut.toString()}
+                onPress={() => navigation.navigate('DetalleSeguimientoPap', { rut: item.rut })}
+                style={styles.patientCard}
+              >
+                <View style={styles.cardHeader}>
+                  <View style={styles.patientInfo}>
+                    <Text style={styles.patientName}>{item.nombreCompleto}</Text>
+                    <Text style={styles.patientRut}>RUT: {item.rut}</Text>
+                  </View>
+                  <Ionicons name="chevron-forward-outline" size={20} color="#a33d69" />
+                </View>
                 
-              </View>
-              
-              <Text style={styles.rutPaciente}>RUT: {item.rut}</Text>
-              
-              <View style={[
-                styles.estadoContainer,
-                { backgroundColor: getEstadoBackgroundColor(item.estadoActual) }
-              ]}>
-                <Text style={[
-                  styles.estadoText,
-                  { color: getEstadoColor(item.estadoActual) }
-                ]}>
-                  {item.estadoActual}
-                </Text>
-              </View>
-            </Pressable>
-          ))}
+                <View style={styles.statusContainer}>
+                  <View style={[
+                    styles.statusBadge,
+                    { backgroundColor: getEstadoBackgroundColor(item.estadoActual) }
+                  ]}>
+                    <View style={[
+                      styles.statusDot,
+                      { backgroundColor: getEstadoColor(item.estadoActual) }
+                    ]} />
+                    <Text style={[
+                      styles.statusText,
+                      { color: getEstadoColor(item.estadoActual) }
+                    ]}>
+                      {item.estadoActual}
+                    </Text>
+                  </View>
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <View style={styles.spacer} />
         </ScrollView>
 
         {/* Modal de ordenamiento */}
@@ -272,13 +301,7 @@ export default function PantallaSeguimientoPap() {
           onRequestClose={closeOrderModal}
           statusBarTranslucent={true}
         >
-          {isOrderModalVisible && <StatusBar translucent backgroundColor="rgba(0,0,0,0)" barStyle="light-content" />}
-          <Animated.View
-            style={[
-              styles.overlay,
-              { opacity: orderOverlayOpacity }
-            ]}
-          >
+          <Animated.View style={[styles.overlay, { opacity: orderOverlayOpacity }]}>
             <TouchableWithoutFeedback onPress={closeOrderModal}>
               <View style={StyleSheet.absoluteFill} />
             </TouchableWithoutFeedback>
@@ -286,10 +309,8 @@ export default function PantallaSeguimientoPap() {
 
           <Animated.View
             style={[
-              styles.modalViewV2,
-              {
-                transform: [{ translateY: orderModalY }]
-              }
+              styles.modalView,
+              { transform: [{ translateY: orderModalY }] }
             ]}
           >
             <View style={styles.modalHeader}>
@@ -299,7 +320,7 @@ export default function PantallaSeguimientoPap() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.optionsContainer}>
+            <View style={styles.optionsContainer}>
               {orderOptions
                 .filter(option => option.value === 'AZ' || option.value === 'ZA')
                 .map((option, index, filteredOptions) => (
@@ -313,145 +334,209 @@ export default function PantallaSeguimientoPap() {
                   onPress={() => handleOrderChange(option.value)}
                 >
                   <View style={styles.optionContent}>
-                    <Icons
-                      name={option.icon}
+                    <Ionicons
+                      name={option.value === 'AZ' ? 'arrow-down-outline' : 'arrow-up-outline'}
                       size={20}
-                      color={orden === option.value ? '#E91E63' : '#666666'}
+                      color={orden === option.value ? '#b52e69' : '#666666'}
                     />
                     <Text style={[
                       styles.optionText,
                       orden === option.value && styles.selectedOptionText
                     ]}>
-                      {(option.value === "AZ" ? "Nombre A-Z" : "Nombre Z-A")}
+                      {option.value === "AZ" ? "Nombre A-Z" : "Nombre Z-A"}
                     </Text>
                   </View>
                 </TouchableOpacity>
               ))}
-            </ScrollView>
+            </View>
           </Animated.View>
         </Modal>
-      </KeyboardAvoidingView>
+      </LinearGradient>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: Color.colorWhite,
   },
-  
-  // Container principal
-  contentContainer: {
-    flex: 1,
-    backgroundColor: Color.colorLavenderblush,
-  },
-  
-  // Contenedor de búsqueda y filtro
-  searchFilterContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    gap: 12,
-    backgroundColor: Color.colorLavenderblush,
-  },
-  
-  // Estilos del buscador
-  searchContainer: {
+  gradient: {
     flex: 1,
   },
-  searchInputContainer: {
+  scrollContent: {
+    flexGrow: 1,
+  },
+  spacer: {
+    flex: 1,
+  },
+
+  // Header Section
+  headerSection: {
+    alignItems: 'center',
+    paddingTop: Platform.OS === 'ios' ? 40 : 60,
+    paddingBottom: 30,
+  },
+  welcomeTitle: {
+    fontSize: 28,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  welcomeSubtitle: {
+    fontSize: 16,
+    color: 'rgba(255, 255, 255, 0.8)',
+    textAlign: 'center',
+  },
+
+  // Search Section
+  searchSection: {
+    paddingTop : 20,
+    paddingHorizontal: 20,
+    marginBottom: 20,
+  },
+  inputGroup: {
+    marginBottom: 20,
+  },
+  inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'white',
-    borderRadius: 25,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
+    paddingHorizontal: 15,
+    height: 55,
+    shadowColor: '#1f0a12',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
     shadowOpacity: 0.1,
-    shadowRadius: 2,
+    shadowRadius: 3,
+    elevation: 2,
   },
-  searchIcon: {
-    marginRight: 8,
+  inputIcon: {
+    marginRight: 12,
+    color: '#a33d69',
   },
-  searchInput: {
+  modernInput: {
     flex: 1,
     fontSize: 16,
-    color: Color.colorGrey,
+    color: '#1f0a12',
+    paddingVertical: 0,
   },
-  
-  // Estilos del botón de filtro
   filterButton: {
-    backgroundColor: Color.colorPink,
-    borderRadius: 25,
-    width: 48,
-    height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-    elevation: 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
+    padding: 8,
   },
-  
-  // Estilos para la lista de seguimientos
-  scrollViewContainer: {
-    flex: 1,
-    paddingHorizontal: 16,
-  },
-  
-  // Estilos de las tarjetas
-  tarjeta: {
-    backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 16,
+
+  // Results Section
+  resultsContainer: {
+    paddingHorizontal: 20,
     marginBottom: 20,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 8,
-    elevation: 8,
   },
-  tarjetaHeader: {
+  resultsTitle: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1f0a12',
+    marginBottom: 15,
+  },
+
+  // Patient Cards
+  patientCard: {
+    backgroundColor: '#fff',
+    borderRadius: 15,
+    padding: 15,
+    marginBottom: 15,
+    borderWidth: 1,
+    borderColor: '#ebc7d6',
+    shadowColor: '#1f0a12',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  cardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 8,
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  nombrePaciente: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: Color.colorPalevioletred_100,
+  patientInfo: {
     flex: 1,
   },
-  menuDotsButton: {
-    padding: 4,
+  patientName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1f0a12',
+    marginBottom: 4,
   },
-  rutPaciente: {
+  patientRut: {
     fontSize: 14,
     color: '#666',
-    marginBottom: 12,
   },
-  estadoContainer: {
-    alignSelf: 'flex-start',
+  statusContainer: {
+    alignItems: 'flex-start',
+  },
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
   },
-  estadoText: {
+  statusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 6,
+  },
+  statusText: {
     fontSize: 12,
     fontWeight: '600',
   },
-  
-  // Estilos del modal de ordenamiento
+
+  // Loading States
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginTop: 10,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorText: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginTop: 10,
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyText: {
+    color: '#ffffff',
+    fontSize: 16,
+    marginTop: 10,
+  },
+
+  // Modal Styles
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0, 0, 0, 0.5)",
   },
-  modalViewV2: {
+  modalView: {
     position: 'absolute',
     bottom: 0,
     left: 0,
@@ -465,25 +550,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    padding: 15,
+    padding: 20,
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#ebc7d6',
   },
   modalTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#000000',
+    color: '#1f0a12',
   },
   modalCloseText: {
     fontSize: 16,
-    color: '#E91E63',
+    color: '#b52e69',
     fontWeight: 'bold',
   },
   optionsContainer: {
-    maxHeight: '100%',
+    paddingVertical: 10,
   },
   optionItem: {
-    padding: 15,
+    padding: 20,
   },
   optionContent: {
     flexDirection: 'row',
@@ -492,17 +577,17 @@ const styles = StyleSheet.create({
   },
   optionBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#E0E0E0',
+    borderBottomColor: '#ebc7d6',
   },
   optionText: {
     fontSize: 16,
     color: '#666666',
   },
   selectedOption: {
-    backgroundColor: '#FCE4EC',
+    backgroundColor: 'rgba(181, 46, 105, 0.1)',
   },
   selectedOptionText: {
-    color: '#E91E63',
+    color: '#b52e69',
     fontWeight: 'bold',
   },
 });

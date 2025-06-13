@@ -160,7 +160,7 @@ const styles = StyleSheet.create({
         marginBottom: Padding.p_5xs,
     },
     button: {
-        backgroundColor: Color.colorPlum,
+        backgroundColor: "#a33d69",
         padding: Padding.p_3xs,
         alignItems: 'center',
         borderRadius: Border.br_xs,
