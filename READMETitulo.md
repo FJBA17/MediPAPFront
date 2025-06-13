@@ -19,7 +19,7 @@ MediPAP es una aplicación móvil desarrollada para facilitar la gestión y segu
 
 - Registro eficiente de datos clínicos
 - Visualización del estado de vigencia del PAP
-- Generación de reportes y estadísticas
+- Generación estadísticas
 - Asignación de roles con distintos niveles de acceso
 - Asociación de usuarios a unidades de salud gestionadas por administradores
 
