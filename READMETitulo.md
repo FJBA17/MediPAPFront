@@ -101,6 +101,12 @@ MediPAP es una aplicación móvil desarrollada para facilitar la gestión y segu
 - Es necesario contar con un túnel SSH para acceder a la base de datos
 - El backend adjunto en este repositorio corresponde al mismo que se encuentra en producción, pero no contiene la conexión base de datos completa debido al túnel SSH
 - Se adjunta EXCEL con tablas para cargar con datos de pacientes alterados y antiguos
+- Se adjunta .env de front:
+- STAGE=dev 
+API_URL= https://dev-medipap-bd.app-zdad-informaticos.net/
+APP_VERSION=1.15
+APP_STORE_ID=link_de_appstore
+PLAY_STORE_ID=link_de_playstores
 
 ***
 
